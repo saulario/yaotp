@@ -14,8 +14,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pymongo
-
 from datetime import datetime
 
 #
@@ -23,13 +21,12 @@ from datetime import datetime
 #
 class Context(object):
     
-    def __init__(self, mq):
+    def __init__(self):
         """
         Constructor
         """
-        self.client = pymongo.MongoClient("mongodb://sdcore:4n2HruMDDz4G1HgKgm6i9I8YaPwTl44DcXN3Wej7u2BbMY7zPcTJD2aN57b66fQtIPcqgKvVPe7lPHxb4YNN9g==@sdcore.documents.azure.com:10255/?ssl=true&replicaSet=globaldb")
-        self.mq = mq
-        self.db = self.client.get_database("telemetria")
+        self.client = None
+        self.db = None
         self._dispositivos = []
         
         self.home = None
@@ -38,13 +35,7 @@ class Context(object):
         self.user = None
         self.password = None
         self.ahora = datetime.utcnow()
-        
-    def close(self):
-        """
-        Cierre de recursos del contexto
-        """
-        self.client.close()
-        
+              
     def get_dispositivos(self):
         """
         Mantiene una lista de los dispositivos vinculados a la cola

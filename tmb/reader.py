@@ -17,6 +17,7 @@
 import configparser
 import logging
 import os
+import pymongo
 import sys
 
 import dispositivos
@@ -46,12 +47,15 @@ if __name__ == "__main__":
         cp = configparser.ConfigParser()
         cp.read(YAOTP_CONFIG)
         
-        context = Context("")
+        context = Context()
         context.home = YAOTP_HOME
         context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
         context.queue = cp.get("TDI", "cola")
         context.user = cp.get("TDI", "user")
         context.password = cp.get("TDI", "password")
+        
+        context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
+        context.db = context.client.get_database(cp.get("MONGO", "db"))
     
         dispositivos.procesar(context)
         notificaciones.procesar(context)
@@ -61,7 +65,7 @@ if __name__ == "__main__":
         log.error(e)
         retval = 1
     finally:
-        context.close()
+        context.client.close()
 
     log.info("<----- Fin")
     sys.exit(retval)
