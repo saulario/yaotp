@@ -14,6 +14,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import configparser
 import logging
 import os
 import sys
@@ -21,6 +22,7 @@ import sys
 import requests
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
+YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
 YAOTP_LOG = ("%s/log/tacho.log" % YAOTP_HOME)
 logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
                     format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")    
@@ -28,11 +30,13 @@ log = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     log.info("-----> Inicio **********")
-    
     retval = 0
     
     try:
-        url = "http://62.175.136.94:4084/listdrivers"
+        cp = configparser.ConfigParser()
+        cp.read(YAOTP_CONFIG)
+               
+        url = ("%s/listvehics" % cp.get("TDI", "url_ws"))
         res = requests.get(url)
         
         log.info(res.json())

@@ -673,6 +673,7 @@ def parse(context, texto):
     log.info("\t(texto): %s" % texto)
     
     mensaje = parser_factory(context, texto).parse(texto);
+    mensaje["fechaProceso"] = context.ahora
         
     log.info("<----- Fin")        
     return mensaje

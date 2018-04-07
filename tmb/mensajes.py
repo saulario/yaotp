@@ -27,14 +27,10 @@ log = logging.getLogger(__name__)
 def procesar(context):
     log.info("-----> Inicio")
     
-    try:
-        res = requests.get("%smultipullTarget=%s&multipullMax=100" 
-                           % (context.url, context.queue), 
-                 auth=(context.user, context.password))              
-        mensajes = res.text.splitlines()
-    except IOError:
-        log.warn("<----- No se ha encontrado archivo de mensajes, saliendo...")
-        return  
+    res = requests.get("%smultipullTarget=%s&multipullMax=100" 
+                       % (context.url, context.queue), 
+             auth=(context.user, context.password))              
+    mensajes = res.text.splitlines()
     
     for texto in mensajes:
         procesar_mensaje(context, texto)

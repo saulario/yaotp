@@ -14,8 +14,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import configparser
 import logging
 import os
+import sys
 
 import dispositivos
 import mensajes
@@ -24,6 +26,7 @@ import notificaciones
 from Context import Context
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
+YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
 YAOTP_LOG = ("%s/log/reader.log" % YAOTP_HOME)
 logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
                     format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")    
@@ -37,27 +40,28 @@ if __name__ == "__main__":
     Main module
     """
     log.info("-----> Inicio")
+    retval = 0
     
-    context = Context("")
+    try:
+        cp = configparser.ConfigParser()
+        cp.read(YAOTP_CONFIG)
+        
+        context = Context("")
+        context.home = YAOTP_HOME
+        context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
+        context.queue = cp.get("TDI", "cola")
+        context.user = cp.get("TDI", "user")
+        context.password = cp.get("TDI", "password")
     
-    context.home = YAOTP_HOME
-    context.url = "http://84.124.55.198:19050/tdi/AMMForm?"
-    context.queue = "SESETEST"
-    context.user = "tdi"
-    context.password = "tdi"
-
-    dispositivos.procesar(context)
-    notificaciones.procesar(context)
-    mensajes.procesar(context)
+        dispositivos.procesar(context)
+        notificaciones.procesar(context)
+        mensajes.procesar(context)
     
-    context.close()
+    except Exception as e:
+        log.error(e)
+        retval = 1
+    finally:
+        context.close()
 
     log.info("<----- Fin")
-    
-def reader(args):
-    log.info("-----> Inicio")
-    
-    for key in args.keys():
-        log.info("\t(%s): %s" % (key, args[key]))
-    
-    log.info("<----- Fin")    
+    sys.exit(retval)

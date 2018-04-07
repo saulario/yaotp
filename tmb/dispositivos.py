@@ -14,7 +14,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import logging
 import requests
 
@@ -26,13 +25,9 @@ def procesar(context):
     """
     log.info("-----> Inicio")
     
-    try:
-        res = requests.get("%sinfoTarget=%s" % (context.url, context.queue), 
-                 auth=(context.user, context.password))        
-        dispositivos = res.json()
-    except IOError:
-        log.warn("<----- No se ha encontrado archivo de dispositivos, saliendo...")
-        return
+    res = requests.get("%sinfoTarget=%s" % (context.url, context.queue), 
+             auth=(context.user, context.password))        
+    dispositivos = res.json()
     
     dispositivosCol = context.db.get_collection("dispositivos")
     dispositivosCol.delete_many({})
