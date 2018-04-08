@@ -28,7 +28,8 @@ from Context import Context
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
 YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
-YAOTP_LOG = ("%s/log/reader.log" % YAOTP_HOME)
+YAOTP_LOG = ("%s/log/%s.log" % 
+             (YAOTP_HOME, os.path.basename(__file__).split(".")[0]))
 logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
                     format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")    
 log = logging.getLogger(__name__)
