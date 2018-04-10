@@ -49,9 +49,13 @@ def procesar_mensaje(context, texto):
     log.info("-----> Inicio")
     log.info("\t(texto): %s " % texto)
         
-    mensaje = analizador.parse(context, texto)
-    if not mensaje is None:
-        insertedId = context.db.mensajes.insert_one(mensaje).inserted_id
-        enviar_mq(context, insertedId)
+    try:
+        mensaje = analizador.parse(context, texto)
+        if not mensaje is None:
+            insertedId = context.db.mensajes.insert_one(mensaje).inserted_id
+            enviar_mq(context, insertedId)
+    except Exception as e:
+        log.error(e)
+        log.error("*** ignorando mensaje %s" % texto)
     
     log.info("<----- Fin")
