@@ -68,7 +68,7 @@ def convertir_coordenada_GPS(latitud, longitud):
 
     retval = {}
     retval["type"] = "Point"
-    retval["coord"] = [ lat, lon ]
+    retval["coordinates"] = [ lat, lon ]
     
     log.info("<----- Fin")
     return retval
