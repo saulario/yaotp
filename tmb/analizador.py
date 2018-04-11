@@ -16,10 +16,16 @@
 
 import datetime
 import logging
+import re
 
 import gis
 
 log = logging.getLogger(__name__)
+
+tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
+                                + "(?P<pais>[A-Z\s]{0,3})"
+                                + "(?P<cond1>.{0,16})\*"
+                                + "(?P<cond2>.{0,16})\*$"))
 
 #
 #
@@ -127,6 +133,18 @@ class ParserP(object):
         if not "CANBUS" in mensaje:
             mensaje["CANBUS"] = {}
         return mensaje["CANBUS"]
+    
+    def _get_datos_canbus_conductores(self, canbus):
+        tacho = canbus["tacografo"]
+        if tacho is None or len(tacho) < 16:
+            return
+        match = tacografo_pattern.match(tacho)
+        if not match:
+            return
+        if len(match.group("cond1")) > 0:
+            canbus["cond1"] = match.group("cond1")
+        if len(match.group("cond2")) > 0:
+            canbus["cond2"] = match.group("cond2")
     
     def _get_datos_conductores(self, mensaje):
         if not "COND" in mensaje:
@@ -345,6 +363,7 @@ class ParserP(object):
         self._d["tacografo"] = campos.pop(0)
         self._d["distancia"] = campos.pop(0)
         self._d["temperatura"] = campos.pop(0)
+        self._get_datos_canbus_conductores(self._d)
 
     def _22_canbus_horas(self, mm, campos, mensaje):
         self._current = int(mm[self.CANBUS_HORAS])
