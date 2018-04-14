@@ -23,6 +23,8 @@ tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
                                 + "(?P<pais>[A-Z\s]{0,3})"
                                 + "(?P<cond1>.{0,16})\*"
                                 + "(?P<cond2>.{0,16})\*$"))
+def nibble(v):
+    return ("0000" + bin(15)[2:])[-4:]
 
 def componer_respuesta(v, t):
 #    return { "estado": v, "texto": t}
@@ -112,8 +114,9 @@ def sentido(v):
     return componer_respuesta(v, switch.get(v, "Unknown")) 
 
 def obtener_cond1_presente(texto):
-    v = int(texto[2], base=16)
+    v = int(texto[2], base=16) & 3
     return tarjeta_presente(v)
+#(Right$(ConvBinario(Mid$(tacografo, 3, 1)), 2))
     
 def obtener_cond2_presente(texto):
     v = int(texto[4], base=16)
@@ -122,24 +125,29 @@ def obtener_cond2_presente(texto):
 def obtener_cond1_estado(texto):
     v = int(texto[1], base=16) & 7
     return conductor_estado(v)
+#Right$(ConvBinario(Mid$(tacografo, 2, 1)), 3))
 
 def obtener_cond2_estado(texto):
-    z1 = bin(int(texto[0], base=16) & 3)[2:]
-    z2 = bin(int(texto[3], base=16) & 1)[2:]
+    z1 = nibble(bin(int(texto[0], base=16)))[-2:]
+    z2 = nibble(bin(int(texto[1], base=16)))[1]
     v = int(z1 + z2, base=2)
     return conductor_estado(v)
+#(Right$(ConvBinario(Left$(tacografo, 1)), 2)) & 
+#Trim(Left$(ConvBinario(Mid$(tacografo, 2, 1)), 1))
 
 def obtener_cond1_alarma(texto):
     v = int(texto[3], base=16)
     return conductor_alarma(v)
+#(Trim(ConvBinario(Mid$(tacografo, 4, 1))))
 
 def obtener_cond2_alarma(texto):
     v = int(texto[5], base=16)
     return conductor_alarma(v)
 
 def obtener_movimiento(texto):
-    v = int(texto[0], base=16) & 3
+    v = nibble(int(texto[0], base=16) & 3)[:2]
     return vehiculo_movimiento(v)
+#Left$(ConvBinario(Left$(tacografo, 1)), 2))
 
 def obtener_exceso_velocidad(texto):
     v = int(texto[2], base=16)
