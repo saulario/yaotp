@@ -25,7 +25,8 @@ tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
                                 + "(?P<cond2>.{0,16})\*$"))
 
 def componer_respuesta(v, t):
-    return { "estado": v, "texto": t}
+#    return { "estado": v, "texto": t}
+    return t
 
 def conductor_estado(v):
     switch = {
@@ -57,21 +58,19 @@ def vehiculo_movimiento(v):
             }    
     return componer_respuesta(v, switch.get(v, "Unknown"))
 
-def get_tarjetas_conductor(self, canbus):
-    tacho = canbus["tacografo"]
-    if tacho is None or len(tacho) < 16:
-        return
-    match = tacografo_pattern.match(tacho)
-    if not match:
-        return
-    if len(match.group("cond1")) > 0:
-        c = {}
-        c["tarjeta"] = match.group("cond1")
-        canbus["COND1"] = c
-    if len(match.group("cond2")) > 0:
-        c = {}
-        c["tarjeta"] = match.group("cond1")
-        canbus["COND2"] = c
+def obtener_cond1_estado(texto):
+    v = int(texto[1], base=16) & 7
+    return conductor_estado(v)
+
+def obtener_cond2_estado(texto):
+    z1 = bin(int(texto[0], base=16) & 3)[2:]
+    z2 = bin(int(texto[3], base=16) & 1)[2:]
+    v = int(z1 + z2, base=2)
+    return conductor_estado(v)
+
+def obtener_movimiento(texto):
+    v = int(texto[0], base=16) & 3
+    return vehiculo_movimiento(v)
 
 def obtener_datos_tacografo(texto):
     log.info("-----> Inicio")
@@ -86,15 +85,13 @@ def obtener_datos_tacografo(texto):
         return None    
     
     tacho = {}
-    if len(match.group("cond1")) > 0:
-        tacho["cond1"] = match.group("cond1")
-    if len(match.group("cond2")) > 0:
-        tacho["cond2"] = match.group("cond2")
+    tacho["c1Tarjeta"] = match.group("cond1")
+    tacho["c2Tarjeta"] = match.group("cond2")
+    tacho["c1Estado"] = obtener_cond1_estado(texto)
+#    tacho["c1Alarma"] = obtener_cond1_alarma(texto)
+    tacho["c2Estado"] = obtener_cond2_estado(texto)
+#    tacho["c2Alarma"] = obtener_cond2_alarma(texto)
+    tacho["movimiento"] = obtener_movimiento(texto)
 
     log.info("<----- Fin")
     return tacho
-    
-    
-    
-    
-
