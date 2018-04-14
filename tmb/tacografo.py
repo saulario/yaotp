@@ -119,8 +119,9 @@ def obtener_cond1_presente(texto):
 #(Right$(ConvBinario(Mid$(tacografo, 3, 1)), 2))
     
 def obtener_cond2_presente(texto):
-    v = int(texto[4], base=16)
+    v = int(texto[4], base=16) & 3
     return tarjeta_presente(v)
+#(Right$(ConvBinario(Mid$(tacografo, 5, 1)), 2))
 
 def obtener_cond1_estado(texto):
     v = int(texto[1], base=16) & 7
@@ -143,31 +144,37 @@ def obtener_cond1_alarma(texto):
 def obtener_cond2_alarma(texto):
     v = int(texto[5], base=16)
     return conductor_alarma(v)
+#(Trim(ConvBinario(Mid$(tacografo, 6, 1))))
 
 def obtener_movimiento(texto):
-    v = nibble(int(texto[0], base=16) & 3)[:2]
+    v = int(nibble(int(texto[0], base=16) & 3)[:2], base=2)
     return vehiculo_movimiento(v)
 #Left$(ConvBinario(Left$(tacografo, 1)), 2))
 
 def obtener_exceso_velocidad(texto):
-    v = int(texto[2], base=16)
+    v = int(nibble(int(texto[2], base=16))[:2], base=2)
     return exceso_velocidad(v)
+#(Left$(ConvBinario(Mid$(tacografo, 3, 1)), 2))
 
 def obtener_evento(texto):
-    v = int(texto[7], base=16)
+    v = int(texto[7], base=16) & 3
     return evento(v)
+#(Right$(ConvBinario(Mid$(tacografo, 8, 1)), 2))
 
 def obtener_manipulacion(texto):
-    v = int(texto[7], base=16)
+    v = int(nibble(int(texto[7], base=16))[:2], base=2)
     return manipulacion(v)
+#(Left$(ConvBinario(Mid$(tacografo, 8, 1)), 2))
 
 def obtener_modo(texto):
-    v = int(texto[6], base=16)
+    v = int(texto[6], base=16) & 3
     return modo(v)
+#(Right$(ConvBinario(Mid$(tacografo, 7, 1)), 2))
 
 def obtener_sentido(texto):
-    v = int(texto[6], base=16)
+    v = int(nibble(int(texto[6], base=16))[:2], base=2)
     return sentido(v)
+#(Left$(ConvBinario(Mid$(tacografo, 7, 1)), 2))
 
 def obtener_datos_tacografo(texto):
     log.info("-----> Inicio")
