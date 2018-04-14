@@ -28,6 +28,13 @@ def componer_respuesta(v, t):
 #    return { "estado": v, "texto": t}
     return t
 
+def tarjeta_presente(v):
+    switch = {
+            0: "Card not present",
+            1: "Card present",
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown")) 
+
 def conductor_estado(v):
     switch = {
             0: "Rest",
@@ -38,7 +45,7 @@ def conductor_estado(v):
             }
     return componer_respuesta(v, switch.get(v, "Unknown"))
 
-def conduccion_estado(v):
+def conductor_alarma(v):
     switch = {
             0: "Normal",
             1: "15 min before 4 1/2 h",
@@ -52,11 +59,65 @@ def conduccion_estado(v):
 
 def vehiculo_movimiento(v):
     switch = {
-            0: "Detected",
-            1: "Not detected",
+            0: "Not detected",
+            1: "Detected",
+            2: "Error",
             3: "Not available"
             }    
     return componer_respuesta(v, switch.get(v, "Unknown"))
+
+def exceso_velocidad(v):
+    switch = {
+            0: "No overspeed",
+            1: "Overspeed",
+            2: "Error",
+            3: "Not available"
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown"))
+
+def evento(v):
+    switch = {
+            0: "No tachograph event",
+            1: "Tachograph event",
+            2: "Error",
+            3: "Not available"
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown"))   
+
+def manipulacion(v):
+    switch = {
+            0: "No handling information",
+            1: "Handling information",
+            2: "Error",
+            3: "Not available"
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown"))  
+
+def modo(v):
+    switch = {
+            0: "Normal performance",
+            1: "Performance analysis",
+            2: "Error",
+            3: "Not available"
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown")) 
+
+def sentido(v):
+    switch = {
+            0: "Fordward",
+            1: "Reverse",
+            2: "Error",
+            3: "Not available"
+            }    
+    return componer_respuesta(v, switch.get(v, "Unknown")) 
+
+def obtener_cond1_presente(texto):
+    v = int(texto[2], base=16)
+    return tarjeta_presente(v)
+    
+def obtener_cond2_presente(texto):
+    v = int(texto[4], base=16)
+    return tarjeta_presente(v)
 
 def obtener_cond1_estado(texto):
     v = int(texto[1], base=16) & 7
@@ -68,9 +129,37 @@ def obtener_cond2_estado(texto):
     v = int(z1 + z2, base=2)
     return conductor_estado(v)
 
+def obtener_cond1_alarma(texto):
+    v = int(texto[3], base=16)
+    return conductor_alarma(v)
+
+def obtener_cond2_alarma(texto):
+    v = int(texto[5], base=16)
+    return conductor_alarma(v)
+
 def obtener_movimiento(texto):
     v = int(texto[0], base=16) & 3
     return vehiculo_movimiento(v)
+
+def obtener_exceso_velocidad(texto):
+    v = int(texto[2], base=16)
+    return exceso_velocidad(v)
+
+def obtener_evento(texto):
+    v = int(texto[7], base=16)
+    return evento(v)
+
+def obtener_manipulacion(texto):
+    v = int(texto[7], base=16)
+    return manipulacion(v)
+
+def obtener_modo(texto):
+    v = int(texto[6], base=16)
+    return modo(v)
+
+def obtener_sentido(texto):
+    v = int(texto[6], base=16)
+    return sentido(v)
 
 def obtener_datos_tacografo(texto):
     log.info("-----> Inicio")
@@ -86,12 +175,21 @@ def obtener_datos_tacografo(texto):
     
     tacho = {}
     tacho["c1Tarjeta"] = match.group("cond1")
-    tacho["c2Tarjeta"] = match.group("cond2")
+    tacho["c1Presente"] = obtener_cond1_presente(texto)
     tacho["c1Estado"] = obtener_cond1_estado(texto)
-#    tacho["c1Alarma"] = obtener_cond1_alarma(texto)
+    tacho["c1Alarma"] = obtener_cond1_alarma(texto)    
+    
+    tacho["c2Tarjeta"] = match.group("cond2")
+    tacho["c2Presente"] = obtener_cond2_presente(texto)    
     tacho["c2Estado"] = obtener_cond2_estado(texto)
-#    tacho["c2Alarma"] = obtener_cond2_alarma(texto)
+    tacho["c2Alarma"] = obtener_cond2_alarma(texto)
+    
     tacho["movimiento"] = obtener_movimiento(texto)
+    tacho["excesoVelocidad"] = obtener_exceso_velocidad(texto)
+    tacho["evento"] = obtener_evento(texto)
+    tacho["manipulacion"] = obtener_manipulacion(texto)
+    tacho["modo"] = obtener_modo(texto)
+    tacho["sentido"] = obtener_sentido(texto)
 
     log.info("<----- Fin")
     return tacho
