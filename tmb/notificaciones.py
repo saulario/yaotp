@@ -14,7 +14,21 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+import requests
+
+log = logging.getLogger(__name__)
+
 def procesar(context):
     """Procesamiento de las notificaciones de los dispositivos asociados a la cola
     """
-    pass
+    log.info("-----> Inicio")
+    res = requests.get("%smultipullTarget=%s&multipullMax=100" 
+                       % (context.url, "Notifications"+ context.queue), 
+             auth=(context.user, context.password))              
+    mensajes = res.text.splitlines()
+    
+    for texto in mensajes:
+        log.info(texto)
+    
+    log.info("<----- Fin")
