@@ -33,12 +33,6 @@ def obtener_temperatura(v):
     if v is None or v == "f":
         return None
     return int(v, base=16)
-
-if __name__ == "__main__":
-    
-    
-    
-    print(obtener_distancia("3c5f5804"))
     
 
 

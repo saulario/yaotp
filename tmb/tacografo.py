@@ -23,8 +23,6 @@ tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
                                 + "(?P<pais>[A-Z\s]{0,3})"
                                 + "(?P<cond1>.{0,16})\*"
                                 + "(?P<cond2>.{0,16})\*$"))
-def nibble(v):
-    return ("0000" + bin(15)[2:])[-4:]
 
 def componer_respuesta(v, t):
 #    return { "estado": v, "texto": t}
@@ -116,22 +114,22 @@ def sentido(v):
 def obtener_cond1_presente(texto):
     v = int(texto[2], base=16) & 3
     return tarjeta_presente(v)
-#(Right$(ConvBinario(Mid$(tacografo, 3, 1)), 2))
+#(Right$(ConvBinario(Mid$(tacografo, 3, 1)), 2)) --
     
 def obtener_cond2_presente(texto):
     v = int(texto[4], base=16) & 3
     return tarjeta_presente(v)
-#(Right$(ConvBinario(Mid$(tacografo, 5, 1)), 2))
+#(Right$(ConvBinario(Mid$(tacografo, 5, 1)), 2)) --
 
 def obtener_cond1_estado(texto):
     v = int(texto[1], base=16) & 7
     return conductor_estado(v)
-#Right$(ConvBinario(Mid$(tacografo, 2, 1)), 3))
+#Right$(ConvBinario(Mid$(tacografo, 2, 1)), 3)) --
 
 def obtener_cond2_estado(texto):
-    z1 = nibble(bin(int(texto[0], base=16)))[-2:]
-    z2 = nibble(bin(int(texto[1], base=16)))[1]
-    v = int(z1 + z2, base=2)
+    z1 = (int(texto[0], base=16) & 3) << 1
+    z2 = (int(texto[1], base=16) & 8) >> 3
+    v = z1 | z2
     return conductor_estado(v)
 #(Right$(ConvBinario(Left$(tacografo, 1)), 2)) & 
 #Trim(Left$(ConvBinario(Mid$(tacografo, 2, 1)), 1))
@@ -147,12 +145,12 @@ def obtener_cond2_alarma(texto):
 #(Trim(ConvBinario(Mid$(tacografo, 6, 1))))
 
 def obtener_movimiento(texto):
-    v = int(nibble(int(texto[0], base=16) & 3)[:2], base=2)
+    v = int(texto[0], base=16) >> 2
     return vehiculo_movimiento(v)
 #Left$(ConvBinario(Left$(tacografo, 1)), 2))
 
 def obtener_exceso_velocidad(texto):
-    v = int(nibble(int(texto[2], base=16))[:2], base=2)
+    v = int(texto[2], base=16) >> 2
     return exceso_velocidad(v)
 #(Left$(ConvBinario(Mid$(tacografo, 3, 1)), 2))
 
@@ -162,7 +160,7 @@ def obtener_evento(texto):
 #(Right$(ConvBinario(Mid$(tacografo, 8, 1)), 2))
 
 def obtener_manipulacion(texto):
-    v = int(nibble(int(texto[7], base=16))[:2], base=2)
+    v = int(texto[7], base=16) >> 2
     return manipulacion(v)
 #(Left$(ConvBinario(Mid$(tacografo, 8, 1)), 2))
 
@@ -172,7 +170,7 @@ def obtener_modo(texto):
 #(Right$(ConvBinario(Mid$(tacografo, 7, 1)), 2))
 
 def obtener_sentido(texto):
-    v = int(nibble(int(texto[6], base=16))[:2], base=2)
+    v = int(texto[6], base=16) >> 2
     return sentido(v)
 #(Left$(ConvBinario(Mid$(tacografo, 7, 1)), 2))
 
