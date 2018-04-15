@@ -354,12 +354,16 @@ class ParserP(object):
         v = taco.obtener_datos_tacografo(self._d["tacografo"])
         if not v is None:
             mensaje["TACHO"] = v
+            
         v = canbus.obtener_distancia(campos.pop(0))
         if not v is None:
             self._d["distancia"] = v
-        v = canbus.obtener_temperatura(campos.pop(0))
+        v = canbus.obtener_temp_motor(campos.pop(0))
         if not v is None:
-            self._d["temperatura"] = v
+            self._d["tempMotor"] = v
+        v = canbus.obtener_temp_fuel(campos.pop(0))
+        if not v is None:
+            self._d["tempFuel"] = v            
 
     def _22_canbus_horas(self, mm, campos, mensaje):
         self._current = int(mm[self.CANBUS_HORAS])
