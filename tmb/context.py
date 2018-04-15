@@ -16,9 +16,6 @@
 
 from datetime import datetime
 
-#
-#
-#
 class Context(object):
     
     def __init__(self):
