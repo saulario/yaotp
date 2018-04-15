@@ -29,10 +29,18 @@ def obtener_distancia(v):
     res = int(res * 0.005)
     return res
     
-def obtener_temperatura(v):
+def obtener_temp_motor(v):
     if v is None or v == "f":
         return None
-    return int(v, base=16)
+    res = float(v[:2], base=16) - 40
+    return res
+#CInt("&H" & Mid(temperatura, 1, 2)) - 40
     
+def obtener_temp_fuel(v):
+    if v is None or v == "f":
+        return None
+    res = float(v[2:4], base=16) - 40
+    return res
+#CInt("&H" & Mid(temperatura, 3, 2)) - 40
 
 
