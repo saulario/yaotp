@@ -41,7 +41,7 @@ if __name__ == "__main__":
     """
     Main module
     """
-    log.info("-----> Inicio")
+    log.info("=====> Inicio (%s)" % os.getpid())
     retval = 0
     
     try:
@@ -68,5 +68,5 @@ if __name__ == "__main__":
     finally:
         context.client.close()
 
-    log.info("<----- Fin")
+    log.info("<===== Fin (%s)" % os.getpid())
     sys.exit(retval)
