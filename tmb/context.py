@@ -16,9 +16,6 @@
 
 from datetime import datetime
 
-#
-#
-#
 class Context(object):
     
     def __init__(self):
@@ -27,7 +24,7 @@ class Context(object):
         """
         self.client = None
         self.db = None
-        self._dispositivos = []
+        self._dispositivos = None
         
         self.home = None
         self.url = None
@@ -40,7 +37,7 @@ class Context(object):
         """
         Mantiene una lista de los dispositivos vinculados a la cola
         """
-        if len(self._dispositivos) == 0:
+        if self._dispositivos is None:
             self._dispositivos = dict((d["ID_MOVIL"], d) for d in self.db.dispositivos.find())
         return self._dispositivos
         

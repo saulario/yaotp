@@ -24,7 +24,7 @@ import dispositivos
 import mensajes
 import notificaciones
 
-from Context import Context
+from context import Context
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
 YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
