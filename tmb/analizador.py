@@ -370,14 +370,18 @@ class ParserP(object):
         if not self._current:
             return    
         self._d = self._get_datos_canbus(mensaje)
-        self._d["horas"] = campos.pop(0)
+        v = canbus.obtener_horas(campos.pop(0))
+        if not v is None:
+            self._d["horas"] = v
         
     def _23_canbus_fuel(self, mm, campos, mensaje):
         self._current = int(mm[self.CANBUS_FUEL])
         if not self._current:
             return    
         self._d = self._get_datos_canbus(mensaje)
-        self._d["combustible"] = campos.pop(0)
+        v = canbus.obtener_combustible(campos.pop(0))
+        if not v is None:
+            self._d["combustible"] = v
 
     def _24_canbus_extendido(self, mm, campos, mensaje):
         self._current = int(mm[self.CANBUS_EXTENDIDO])
