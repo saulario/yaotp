@@ -19,6 +19,7 @@ import logging
 import re
 
 import canbus
+import di
 import gis
 import tacografo as taco
 
@@ -324,14 +325,18 @@ class ParserP(object):
             self._t = None        
         self._d["sondas"].append(self._t)
                     
-    def _18_datos_gps(self, mm, campos, mensaje):
+    def _18_datos_gps(self, mm, campos, mensaje, esquema):
         self._current = int(mm[self.DATOS_GPS])
         if not self._current:
             return
         self._d = self._get_datos_gps(mensaje)
         self._d["kilometros"] = float(campos.pop(0)) 
-        self._d["entradasDigitales"] = float(campos.pop(0))
-
+        self._d["entradasDigitales"] = int(campos.pop(0))
+        v = di.obtener_entradas_digitales(self._d["entradasDigitales"], 
+                                          esquema)
+        if not v is None:
+            mensaje["DI"] = v        
+        
     def _19_contador(self, mm, campos, mensaje):
         self._current = int(mm[self.CONTADOR])
         if not self._current:
@@ -616,7 +621,8 @@ class ParserP(object):
         
         self._16_thermo_guard_vi(self._mm, self._campos, self._mensaje)
         self._17_th12online(self._mm, self._campos, self._mensaje)
-        self._18_datos_gps(self._mm, self._campos, self._mensaje)
+        self._18_datos_gps(self._mm, self._campos, self._mensaje,
+                           self._dispositivo["SCHEMATYPE"])
         self._19_contador(self._mm, self._campos, self._mensaje)
         self._20_mantenimiento(self._mm, self._campos, self._mensaje)
         

@@ -188,18 +188,18 @@ def obtener_datos_tacografo(texto):
     
     tacho = {}
     t = match.group("cond1")
-    if not t is None:
+    if len(t) > 0:
         tacho["c1Tarjeta"] = t
+        tacho["c1Estado"] = obtener_cond1_estado(texto)
+        tacho["c1Alarma"] = obtener_cond1_alarma(texto)            
     tacho["c1Presente"] = obtener_cond1_presente(texto)
-    tacho["c1Estado"] = obtener_cond1_estado(texto)
-    tacho["c1Alarma"] = obtener_cond1_alarma(texto)    
     
     t = match.group("cond2")
-    if not t is None:
+    if len(t) > 0:
         tacho["c2Tarjeta"] = t
+        tacho["c2Estado"] = obtener_cond2_estado(texto)
+        tacho["c2Alarma"] = obtener_cond2_alarma(texto)        
     tacho["c2Presente"] = obtener_cond2_presente(texto)    
-    tacho["c2Estado"] = obtener_cond2_estado(texto)
-    tacho["c2Alarma"] = obtener_cond2_alarma(texto)
     
     tacho["movimiento"] = obtener_movimiento(texto)
     tacho["excesoVelocidad"] = obtener_exceso_velocidad(texto)
@@ -209,4 +209,4 @@ def obtener_datos_tacografo(texto):
     tacho["sentido"] = obtener_sentido(texto)
 
     log.info("<----- Fin")
-    return tacho
+    return tacho        
