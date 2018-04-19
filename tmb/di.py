@@ -34,62 +34,112 @@ def portatil_simple(v):
 
 def remolque_ABS(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    return di
+
+def remolque_porton(v):
+    di = comun(v)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def remolque_simple(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def remolque_frigorifico_TH14_PF(v):
     di = comun(v)
+    di["portonCerrado"] = int(v & 16 != 0)
+    di["frioEncendido"] = int(v & 32 != 0)
     return di
 
 def remolque_frigorifico_TH14_AF(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["frioEncendido"] = int(v & 32 != 0)
     return di
 
 def remolque_frigorifico(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["frioEncendido"] = int(v & 32 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def remolque_frigorifico_noporton(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["frioEncendido"] = int(v & 32 != 0)
     return di
 
 def remolque_cierre_seguridad_lecitrailer(v):
     di = comun(v)
+    di["portonCerrado"] = int(v & 16 != 0)
+    di["cilindroCerrado"] = int(v & 32 != 0)
+    di["cubrefallebasCerrado"] = int(v & 64 != 0)
     return di
 
 def remolque_cierre_seguridad_schmitz(v):
     di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["cilindroCerrado"] = int(v & 32 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
+    return di
+
+def remolque_cierre_seguridad_lapa5(v):
+    di = comun(v)
+    di["absConectado"] = int(v & 16 != 0)
+    di["cilindroCerrado"] = int(v & 32 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def furgon_frigorifico(v):
     di = comun(v)
+    di["frioEncendido"] = int(v & 16 != 0)
+    di["contactoConectado"] = int(v & 32 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def furgon_simple(v):
     di = comun(v)
+    di["contactoConectado"] = int(v & 32 != 0)
+    di["portonCerrado"] = int(v & 64 != 0)
     return di
 
 def tractora_simple(v):
     di = comun(v)
+    di["contactoConectado"] = int(v & 32 != 0)
     return di
 
 def tractora_panico(v):
     di = comun(v)
+    di["contactoConectado"] = int(v & 32 != 0)
+    di["panicoActivado"] = int(v & 64 != 0)
     return di
 
 def tractora_nomasrobos(v):
     di = comun(v)
+    alarma_conectada = (v & 16 != 0)
+    di["alarmaConectada"] = int(alarma_conectada)
+    if alarma_conectada:
+        di["alarmaDisparada"] = int(v & 64 != 0)
+    else:
+        di["taponAbierto"] = int(v & 64 != 0)
+    di["contactoConectado"] = int(v & 32 != 0)
     return di
 
 def tractora_arintech(v):
     di = comun(v)
+    di["taponAbierto"] = int(v & 16 != 0)
+    di["contactoConectado"] = int(v & 32 != 0)
+    di["alarmaDisparada"] = int(v & 64 != 0)
     return di
 
 def tractora_portavehiculos(v):
     di = comun(v)
+    di["ptoActivo"] = int(v & 16 != 0)
+    di["contactoConectado"] = int(v & 32 != 0)
     return di
 
 def tractora_TH14(v):
@@ -98,14 +148,18 @@ def tractora_TH14(v):
 
 def tractora_TH21(v):
     di = comun(v)
+    di["contactoConectado"] = int(v & 2 != 0)
     return di
 
 def grua_TH21(v):
     di = comun(v)
+    di["motorCamionEncendido"] = int(v & 2 != 0)
+    di["motorGruaEncendido"] = int(v & 4 != 0)
     return di
 
 def remolque_TH21(v):
     di = comun(v)
+    di["portonCerrado"] = int(v & 4 != 0)
     return di
 
 def obtener_entradas_digitales(v, esquema):
@@ -119,6 +173,10 @@ def obtener_entradas_digitales(v, esquema):
     
     if esquema.startswith("Portatil_Simple"):
         f = portatil_simple
+    elif esquema.startswith("Remolque_ABS"):
+        f = remolque_ABS
+    elif esquema.startswith("Remolque_Porton"):
+        f = remolque_porton           
     elif esquema.startswith("Remolque_Simple"):
         f = remolque_simple
     elif esquema.startswith("Remolque_Frigorifico_TH14_PF"):
@@ -133,6 +191,8 @@ def obtener_entradas_digitales(v, esquema):
         f = remolque_cierre_seguridad_lecitrailer    
     elif esquema.startswith("Remolque_Cierre_Seguridad_Schmitz"):
         f = remolque_cierre_seguridad_schmitz
+    elif esquema.startswith("Remolque_Cierre_Seguridad_Lapa5"):
+        f = remolque_cierre_seguridad_lapa5        
     elif esquema.startswith("Furgon_Frigorifico"):
         f = furgon_frigorifico
     elif esquema.startswith("Furgon_Simple"):
@@ -161,25 +221,3 @@ def obtener_entradas_digitales(v, esquema):
    
     log.info("<----- Fin")
     return di
-
-if __name__ == "__mainn__":
-    di = obtener_entradas_digitales(65535, "Portatil_Simple")
-    di = obtener_entradas_digitales(65535, "Remolque_Simple")
-    di = obtener_entradas_digitales(65535, "Remolque_Frigorifico_TH14_PF")
-    di = obtener_entradas_digitales(65535, "Remolque_Frigorifico_TH14_AF")
-    di = obtener_entradas_digitales(65535, "Remolque_Frigorifico")
-    di = obtener_entradas_digitales(65535, "Remolque_Frigorifico_Noporton")
-    di = obtener_entradas_digitales(65535, 
-                                    "Remolque_Cierre_Seguridad_Lecitrailer")
-    di = obtener_entradas_digitales(65535, "Remolque_Cierre_Seguridad_Schmitz")
-    di = obtener_entradas_digitales(65535, "Furgon_Frigorifico")
-    di = obtener_entradas_digitales(65535, "Furgon_Simple")
-    di = obtener_entradas_digitales(65535, "Tractora_Simple")
-    di = obtener_entradas_digitales(65535, "Tractora_Panico")
-    di = obtener_entradas_digitales(65535, "Tractora_Nomasrobos")
-    di = obtener_entradas_digitales(65535, "Tractora_ArinTech")
-    di = obtener_entradas_digitales(65535, "Tractora_Portavehiculos")
-    di = obtener_entradas_digitales(65535, "Tractora_TH14")
-    di = obtener_entradas_digitales(65535, "Tractora_TH21")
-    di = obtener_entradas_digitales(65535, "Grua_TH21")
-    di = obtener_entradas_digitales(65535, "Remolque_TH21")
