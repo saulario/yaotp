@@ -149,9 +149,10 @@ class ParserP(object):
     
     def _get_datos_temperatura(self, mensaje):
         if not "TEMP" in mensaje:
-            self._td = {}
-            self._td["sondas"] = []
-            mensaje["TEMP"] = self._td
+            td = {}
+            td["sondas"] = []
+            td["dispositivos"] = []
+            mensaje["TEMP"] = td
         return mensaje["TEMP"]
 
     def _get_datos_7080(self, mensaje):
@@ -196,22 +197,26 @@ class ParserP(object):
         self._d["satelites"] = int(campos.pop(0))
 
     def _05_pt100_internas(self, mm, campos, mensaje):
-        self._current = int(mm[self.PT100_INTERNAS])
-        if not self._current:
+        current = int(mm[self.PT100_INTERNAS])
+        if not current:
             return       
-        self._d = self._get_datos_temperatura(mensaje)
-        self._sondas = list(float(campos.pop(0)) for i in range(3 + int(mm[self.TH16])))
-        for t in self._sondas:
-            self._d["sondas"].append(t)
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.PT100_INTERNAS)
+        sondas = list(float(campos.pop(0)) for i in range(3 + int(mm[self.TH16])))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)
         
     def _06_pt100_externas(self, mm, campos, mensaje):
-        self._current = int(mm[self.PT100_EXTERNAS])
-        if not self._current:
+        current = int(mm[self.PT100_EXTERNAS])
+        if not current:
             return
-        self._d = self._get_datos_temperatura(mensaje)        
-        self._sondas = list(float(campos.pop(0)) for i in range(3))
-        for t in self._sondas:
-            self._d["sondas"].append(t)        
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.PT100_EXTERNAS)
+        sondas = list(float(campos.pop(0)) for i in range(3))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)        
         
     def _07_entradas_analogicas(self, mm, campos, mensaje):
         self._current = int(mm[self.ENTRADAS_ANALOGICAS])
@@ -220,34 +225,40 @@ class ParserP(object):
         mensaje["analogicInput"] = list(float(campos.pop(0)) for i in range(int(campos.pop(0))))
         
     def _08_transcan(self, mm, campos, mensaje):
-        self._current = int(mm[self.TRANSCAN])
-        if not self._current:
+        current = int(mm[self.TRANSCAN])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)        
-        self._sondas = list(float(campos.pop(0)) for i in range(campos.pop(0)))
-        for t in self._sondas:
-            self._d["sondas"].append(t)
+        d = self._get_datos_temperatura(mensaje)    
+        d["dispositivos"].append(self.TRANSCAN)
+        sondas = list(float(campos.pop(0)) for i in range(campos.pop(0)))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)
         
     def _09_euroscan(self, mm, campos, mensaje):
-        self._current = int(mm[self.EUROSCAN])
-        if not self._current:
+        current = int(mm[self.EUROSCAN])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)        
-        self._sondas = list(float(campos.pop(0)) for i in range(5))
-        for t in self._sondas:
-            self._d["sondas"].append(t)
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.EUROSCAN)
+        sondas = list(float(campos.pop(0)) for i in range(5))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)
                 
     def _10_datacold(self, mm, campos, mensaje):
-        self._current = int(mm[self.DATACOLD])
-        if not self._current:
+        current = int(mm[self.DATACOLD])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)        
-        self._sondas = list(float(campos.pop(0)) for i in range(4))
-        for t in self._sondas:
-            self._d["sondas"].append(t)
-        self._alarmas_sondas = campos.pop(0)        # ignorado
-        self._entradas_digitales = campos.pop(0)    # ignorado
-        self._alarmas_eedd = campos.pop(0)          # ignorado
+        d = self._get_datos_temperatura(mensaje)        
+        d["dispositivos"].append(self.DATACOLD)
+        sondas = list(float(campos.pop(0)) for i in range(4))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)
+        d["alarmas"] = campos.pop(0)
+        d["entradasDigitales"] = campos.pop(0)
+        d["alarmasEEDD"] = campos.pop(0) # ignorado alarmas eedd
         
     def _fromTouchprintToCelsius(self, t):
         self._temp = float(t) / 10
@@ -257,13 +268,15 @@ class ParserP(object):
         return self._temp
 
     def _11_touchprint(self, mm, campos, mensaje):
-        self._current = int(mm[self.TOUCHPRINT])
-        if not self._current:
+        current = int(mm[self.TOUCHPRINT])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)
-        self._sondas = list(self._fromTouchprintToCelsius(campos.pop(0)) for i in range(6))
-        for t in self._sondas:
-            self._d["sondas"].append(t)
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.TOUCHPRINT)
+        sondas = list(self._fromTouchprintToCelsius(campos.pop(0)) for i in range(6))
+        for t in sondas:
+            if not t is None:
+                d["sondas"].append(t)
         
     def _12_digitales(self, mm, campos, mensaje):
         self._current = int(mm[self.ENTRADAS_DIGITALES_EXTENDIDAS])
@@ -272,58 +285,62 @@ class ParserP(object):
         mensaje["entradasDigitales"] = list(campos.pop(0) for i in range(2))
              
     def _13_ibox(self, mm, campos, mensaje):
-        self._current = int(mm[self.IBOX])
-        if not self._current:
+        current = int(mm[self.IBOX])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)
-        self._d["alarmas"] = int(campos.pop(0))
-        self._d["tempRetorno"] = float(campos.pop(0))
-        self._d["tempSuministro"] = float(campos.pop(0))
-        self._d["setPoint"] = float(campos.pop(0))
-        self._d["horasElectrico"] = float(campos.pop(0))
-        self._d["horasMotor"] = float(campos.pop(0))
-        self._d["horasTotales"] = float(campos.pop(0))
-        self._d["modoOperacion"] = int(campos.pop(0))
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.IBOX)
+        d["alarmas"] = int(campos.pop(0))
+        d["tempRetorno"] = float(campos.pop(0))
+        d["tempSuministro"] = float(campos.pop(0))
+        d["setPoint"] = float(campos.pop(0))
+        d["horasElectrico"] = float(campos.pop(0))
+        d["horasMotor"] = float(campos.pop(0))
+        d["horasTotales"] = float(campos.pop(0))
+        d["modoOperacion"] = int(campos.pop(0))
              
     def _14_carrier(self, mm, campos, mensaje):
-        self._current = int(mm[self.CARRIER])
-        if not self._current:
+        current = int(mm[self.CARRIER])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)
-        self._d["setPoint"] = float(campos.pop(0)) / 10
-        self._d["modoOperacion"] = list(campos.pop(0) for i in range(2))
-        self._d["tempRetorno"] = float(campos.pop(0)) / 10
-        self._d["tempSuministro"] = float(campos.pop(0)) / 10
-        self._d["presion"] = float(campos.pop(0)) / 10
-        self._d["horasTotales"] = float(campos.pop(0))
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.CARRIER)
+        d["setPoint"] = float(campos.pop(0)) / 10
+        d["modoOperacion"] = list(campos.pop(0) for i in range(2))
+        d["tempRetorno"] = float(campos.pop(0)) / 10
+        d["tempSuministro"] = float(campos.pop(0)) / 10
+        d["presion"] = float(campos.pop(0)) / 10
+        d["horasTotales"] = float(campos.pop(0))
 
     def _15_das(self, mm, campos, mensaje):
-        self._current = int(mm[self.DAS])
-        if not self._current:
+        current = int(mm[self.DAS])
+        if not current:
             return        
-        self._d = self._get_datos_temperatura(mensaje)
-        self._d["setPoint"] = float(campos.pop(0))
-        self._d["tempRetorno"] = float(campos.pop(0))
-        self._d["tempSuministro"] = float(campos.pop(0))
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.DAS)
+        d["setPoint"] = float(campos.pop(0))
+        d["tempRetorno"] = float(campos.pop(0))
+        d["tempSuministro"] = float(campos.pop(0))
         
     def _16_thermo_guard_vi(self, mm, campos, mensaje):
-        self._current = int(mm[self.THERMO_GUARD_VI])
-        if not self._current:
+        current = int(mm[self.THERMO_GUARD_VI])
+        if not current:
             return
-        self._d = self._get_datos_temperatura(mensaje)
-        self._d["setPoint"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
-        self._d["tempRetorno"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
-        self._d["tempSuministro"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.THERMO_GUARD_VI)
+        d["setPoint"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
+        d["tempRetorno"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
+        d["tempSuministro"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
         
     def _17_th12online(self, mm, campos, mensaje):
-        self._current = int(mm[self.TH12_ONLINE])
-        if not self._current:
+        current = int(mm[self.TH12_ONLINE])
+        if not current:
             return    
-        self._d = self._get_datos_temperatura(mensaje)
-        self._t = float(campos.pop(0))
-        if self._t <= -30 or self._t >= 50:
-            self._t = None        
-        self._d["sondas"].append(self._t)
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self.TH12_ONLINE)
+        t = float(campos.pop(0))  
+        if -30 <= t <= 50:
+            d["sondas"].append(self._t)
                     
     def _18_datos_gps(self, mm, campos, mensaje, esquema):
         self._current = int(mm[self.DATOS_GPS])
@@ -709,3 +726,20 @@ def parse(context, texto):
         
     log.info("<----- Fin")        
     return mensaje
+
+#if __name__ == "__main__":
+#
+#    from context import Context
+#    c = Context()
+#    d = {
+#            "ID_MOVIL": 21142,
+#            "MASK": "11110000001000101001000000000000000000000100111000",
+#            "SCHEMATYPE": "Remolque_Frigorifico",
+#            "REGISTRATION": "R1781BCW"
+#            }
+#    c._dispositivos = dict()
+#    c._dispositivos[21142] = d
+#
+#    
+#    m = "GPRS/SOCKET,21142,TDI*P=21142,22/04/2018,22:08:27,22/04/2018,22:08:27,041:46:14.5972N,001:13:05.8199W,262,0,113,10,639,628,-32768,-32768,-32768,695,0,0,0,39607.0,49,0,00000000000000,000010a100008a,00d39245001000,f,21403,9,11.77,00bc,aee4,CRCd26d"
+#    parse(c, m)
