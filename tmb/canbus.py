@@ -48,7 +48,7 @@ def obtener_valor_can(v, k):
     res = int(res * k)
     return res    
 
-def obtener_distancia(v):
+def obtener_odometro(v):
     return obtener_valor_can(v, 0.005)
     
 def obtener_horas(v):

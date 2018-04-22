@@ -190,8 +190,8 @@ class ParserP(object):
             return
         self._d = self._get_datos_gps(mensaje)
         self._d["posicion"] = gis.convertir_coordenada_GPS(campos.pop(0), campos.pop(0))
-        self._d["altitud"] = float(campos.pop(0))
-        self._d["velocidad"] = float(campos.pop(0))
+        self._d["altitud"] = round(float(campos.pop(0)))
+        self._d["velocidad"] = round(float(campos.pop(0)))
         self._d["rumbo"] = int(campos.pop(0))
         self._d["satelites"] = int(campos.pop(0))
 
@@ -330,7 +330,7 @@ class ParserP(object):
         if not self._current:
             return
         self._d = self._get_datos_gps(mensaje)
-        self._d["kilometros"] = float(campos.pop(0)) 
+        self._d["kilometros"] = round(float(campos.pop(0)))
         self._d["entradasDigitales"] = int(campos.pop(0))
         v = di.obtener_entradas_digitales(self._d["entradasDigitales"], 
                                           esquema)
@@ -359,9 +359,9 @@ class ParserP(object):
         v = taco.obtener_datos_tacografo(self._d["tacografo"])
         if not v is None:
             mensaje["TACHO"] = v            
-        v = canbus.obtener_distancia(campos.pop(0))
+        v = canbus.obtener_odometro(campos.pop(0))
         if not v is None:
-            self._d["distancia"] = v            
+            self._d["odometro"] = v            
         temperatura = campos.pop(0)
         v = canbus.obtener_temp_motor(temperatura)
         if not v is None:
@@ -706,4 +706,3 @@ def parse(context, texto):
         
     log.info("<----- Fin")        
     return mensaje
-
