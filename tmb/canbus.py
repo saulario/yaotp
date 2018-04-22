@@ -27,14 +27,12 @@ def obtener_temp_motor(v):
         return None
     res = int(v[:2], base=16) - 40
     return res
-#CInt("&H" & Mid(temperatura, 1, 2)) - 40
     
 def obtener_temp_fuel(v):
     if v is None or v == "f":
         return None
     res = int(v[2:4], base=16) - 40
     return res
-#CInt("&H" & Mid(temperatura, 3, 2)) - 40
     
 def obtener_valor_can(v, k):
     match = valor_can_pattern.match(v)
@@ -56,3 +54,11 @@ def obtener_horas(v):
 
 def obtener_combustible(v):
     return obtener_valor_can(v, 0.5)
+
+def obtener_velocidad(v):
+    if v is None or v == "f":
+        return None
+    v1 = int(v[2:4], base=16)
+    v2 = int(v[4:6], base=16)
+    v3 = v2 << 8 | v1        
+    return round(v3/256)    
