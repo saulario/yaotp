@@ -57,6 +57,7 @@ if __name__ == "__main__":
         
         context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
         context.db = context.client.get_database(cp.get("MONGO", "db"))
+        context.debug = cp.getint("MONGO", "debug")
     
         dispositivos.procesar(context)
         notificaciones.procesar(context)
