@@ -609,76 +609,79 @@ class ParserP(object):
     def _99_finales(self, mm, campos, mensaje):        
         mensaje["segmento"] = campos.pop(0)
         mensaje["offset"] = campos.pop(0)
-        
-    # 11110000001000101001000000000000000000000100111000
+
     def parse(self, texto):
-        self._campos = texto.split(",")
-        self._mensaje = {}
-        self._mensaje["idDispositivo"] = self._dispositivo["ID_MOVIL"]
-        self._mensaje["matricula"] = self._dispositivo["REGISTRATION"]
-        self._mensaje["tipoMensaje"] = "TDI*P"
+        campos = texto.split(",")
+        mensaje = {}
+        mensaje["idDispositivo"] = self._dispositivo["ID_MOVIL"]
+        mensaje["matricula"] = self._dispositivo["REGISTRATION"]
+        mensaje["tipoMensaje"] = "TDI*P"
         
-        self._mm = self._mascara       
-        self._eliminar_campos(self._campos)
+        if self._context.debug == mensaje["idDispositivo"]:
+            mensaje["dbgMascara"] = int(self._dispositivo["MASK"], base=2)
+            mensaje["dbgMensaje"] = texto
         
-        self._01_identificador(self._mm, self._campos, self._mensaje)
-        self._02_fecha_hora(self._mm, self._campos, self._mensaje)
-        self._03_fecha_hora1(self._mm, self._campos, self._mensaje)
-        self._04_datos_gps(self._mm, self._campos, self._mensaje)
-        self._05_pt100_internas(self._mm, self._campos, self._mensaje) 
+        mm = self._mascara       
+        self._eliminar_campos(campos)
         
-        self._06_pt100_externas(self._mm, self._campos, self._mensaje)
-        self._07_entradas_analogicas(self._mm, self._campos, self._mensaje)
-        self._08_transcan(self._mm, self._campos, self._mensaje)
-        self._09_euroscan(self._mm, self._campos, self._mensaje)
-        self._10_datacold(self._mm, self._campos, self._mensaje)
+        self._01_identificador(mm, campos, mensaje)
+        self._02_fecha_hora(mm, campos, mensaje)
+        self._03_fecha_hora1(mm, campos, mensaje)
+        self._04_datos_gps(mm, campos, mensaje)
+        self._05_pt100_internas(mm, campos, mensaje) 
         
-        self._11_touchprint(self._mm, self._campos, self._mensaje)
-        self._12_digitales(self._mm, self._campos, self._mensaje)
-        self._13_ibox(self._mm, self._campos, self._mensaje)
-        self._14_carrier(self._mm, self._campos, self._mensaje)
-        self._15_das(self._mm, self._campos, self._mensaje)
+        self._06_pt100_externas(mm, campos, mensaje)
+        self._07_entradas_analogicas(mm, campos, mensaje)
+        self._08_transcan(mm, campos, mensaje)
+        self._09_euroscan(mm, campos, mensaje)
+        self._10_datacold(mm, campos, mensaje)
         
-        self._16_thermo_guard_vi(self._mm, self._campos, self._mensaje)
-        self._17_th12online(self._mm, self._campos, self._mensaje)
-        self._18_datos_gps(self._mm, self._campos, self._mensaje,
+        self._11_touchprint(mm, campos, mensaje)
+        self._12_digitales(mm, campos, mensaje)
+        self._13_ibox(mm, campos, mensaje)
+        self._14_carrier(mm, campos, mensaje)
+        self._15_das(mm, campos, mensaje)
+        
+        self._16_thermo_guard_vi(mm, campos, mensaje)
+        self._17_th12online(mm, campos, mensaje)
+        self._18_datos_gps(mm, campos, mensaje,
                            self._dispositivo["SCHEMATYPE"])
-        self._19_contador(self._mm, self._campos, self._mensaje)
-        self._20_mantenimiento(self._mm, self._campos, self._mensaje)
+        self._19_contador(mm, campos, mensaje)
+        self._20_mantenimiento(mm, campos, mensaje)
         
-        self._21_canbus(self._mm, self._campos, self._mensaje)
-        self._22_canbus_horas(self._mm, self._campos, self._mensaje)
-        self._23_canbus_fuel(self._mm, self._campos, self._mensaje)
-        self._24_canbus_extendido(self._mm, self._campos, self._mensaje)
-        self._25_canbus_fms3(self._mm, self._campos, self._mensaje)
+        self._21_canbus(mm, campos, mensaje)
+        self._22_canbus_horas(mm, campos, mensaje)
+        self._23_canbus_fuel(mm, campos, mensaje)
+        self._24_canbus_extendido(mm, campos, mensaje)
+        self._25_canbus_fms3(mm, campos, mensaje)
 
-        self._26_glp_iveco_euro5(self._mm, self._campos, self._mensaje)
-        self._27_knorr(self._mm, self._campos, self._mensaje)
-        self._28_haldex(self._mm, self._campos, self._mensaje)
-        self._29_wabco(self._mm, self._campos, self._mensaje)
-        self._30_7080(self._mm, self._campos, self._mensaje)
+        self._26_glp_iveco_euro5(mm, campos, mensaje)
+        self._27_knorr(mm, campos, mensaje)
+        self._28_haldex(mm, campos, mensaje)
+        self._29_wabco(mm, campos, mensaje)
+        self._30_7080(mm, campos, mensaje)
 
-        self._31_informacion_gsm(self._mm, self._campos, self._mensaje)
-        self._32_id_movil_slave(self._mm, self._campos, self._mensaje)
-        self._33_master(self._mm, self._campos, self._mensaje)
-        self._34_trailer_7080(self._mm, self._campos, self._mensaje)
-        self._35_ibutton(self._mm, self._campos, self._mensaje)
+        self._31_informacion_gsm(mm, campos, mensaje)
+        self._32_id_movil_slave(mm, campos, mensaje)
+        self._33_master(mm, campos, mensaje)
+        self._34_trailer_7080(mm, campos, mensaje)
+        self._35_ibutton(mm, campos, mensaje)
 
-        self._36_palfinger(self._mm, self._campos, self._mensaje)
-        self._37_ns_carrier(self._mm, self._campos, self._mensaje)
-        self._38_conductor(self._mm, self._campos, self._mensaje)
-        self._39_doble_conductor(self._mm, self._campos, self._mensaje)
-        self._40_alarma_puerta_slave(self._mm, self._campos, self._mensaje)
+        self._36_palfinger(mm, campos, mensaje)
+        self._37_ns_carrier(mm, campos, mensaje)
+        self._38_conductor(mm, campos, mensaje)
+        self._39_doble_conductor(mm, campos, mensaje)
+        self._40_alarma_puerta_slave(mm, campos, mensaje)
 
-        self._41_lls20160(self._mm, self._campos, self._mensaje)
-        self._42_salidas_digitales(self._mm, self._campos, self._mensaje)
-        self._43_bloque_almacenamiento(self._mm, self._campos, self._mensaje)
-        self._44_power_supply(self._mm, self._campos, self._mensaje)
-        self._45_intelliset(self._mm, self._campos, self._mensaje)
+        self._41_lls20160(mm, campos, mensaje)
+        self._42_salidas_digitales(mm, campos, mensaje)
+        self._43_bloque_almacenamiento(mm, campos, mensaje)
+        self._44_power_supply(mm, campos, mensaje)
+        self._45_intelliset(mm, campos, mensaje)
         
-        self._99_finales(self._mm, self._campos, self._mensaje)
+        self._99_finales(mm, campos, mensaje)
         
-        return self._mensaje
+        return mensaje
         
 #
 #

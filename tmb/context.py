@@ -22,6 +22,7 @@ class Context(object):
         """
         Constructor
         """
+        self.debug = -1
         self.client = None
         self.db = None
         self._dispositivos = None
