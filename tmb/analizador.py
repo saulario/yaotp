@@ -617,7 +617,7 @@ class ParserP(object):
         mensaje["tipoMensaje"] = "TDI*P"
         
         if self._context.debug == mensaje["idDispositivo"]:
-            mensaje["dbgMascara"] = int(self._dispositivo["MASK"], base=2)
+            mensaje["dbgMascara"] = self._dispositivo["maskBin"]
             mensaje["dbgMensaje"] = texto
         
         mm = self._mascara       

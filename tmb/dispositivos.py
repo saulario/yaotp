@@ -37,6 +37,9 @@ def procesar(context):
         for dispositivo in dispositivos[key]:
             dispositivo["ID_MOVIL"] = int(dispositivo["ID_MOVIL"])
             dispositivo["fabricante"] = "TDI"
+            dispositivo["maskBin"] = int(dispositivo["MASK"][::-1], base=2)
+            dispositivo["maskextBin"] = int(dispositivo["MASKEXT"][::-1], 
+                       base=2)
             dispositivosCol.insert_one(dispositivo)
             
     log.info("<----- Fin")
