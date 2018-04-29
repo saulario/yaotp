@@ -17,6 +17,24 @@ siguientes tareas:
 - Persiste los valores decodificados en orden en una colección MongoDB
 - Reenvía (opcional) una señalización a través de RabbitMQ.
 
+#### Qué información ofrece
+
+Por el momento se está ofreciendo la siguiente información, dependiendo -eso
+sí- de si el dispositivo va montado sobre una tractora o sobre un remolque.
+
+- Información GPS completa
+- CANBUS 
+- TACÓGRAFO 
+- EBS (*)
+- FRIGO/REEFER (**)
+- Alarmas (*)
+
+(*) depende de la configuración del equipo externo recibimos una información
+u otra.
+(**) Hay un juego de información común (máquina y sondas), pero luego cada 
+fabricante permite un diferente nivel de integración. Depende, pues, del
+equipo externo que lleve equipado el remolque.
+
 #### Instalación
 
 Se puede hacer _checkout_ del programa en cualquier directorio. Aún no está
