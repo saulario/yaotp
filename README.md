@@ -3,7 +3,7 @@ Yet another telemetry processor
 
 `yaotp` es un procesador genérico de telemetería, aunque la implementación
 inicial es para dispositivos de la familia TH del fabricante español
-[Técnicas de Ingeniería], S.L (https://gesinflot.com/) y su protocolo
+[Técnicas de Ingeniería, S.L](https://gesinflot.com/) y su protocolo
 T-Mobility.
 
 #### ¿Cómo funciona?
