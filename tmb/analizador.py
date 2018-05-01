@@ -481,7 +481,7 @@ class ParserP(object):
         if not self._mascara & self.INFORMACION_GSM:
             return
         d = {}    
-        if not self._mascara & self.SOCKET:
+        if self._mascara & self.SOCKET:
             d["operador"] = campos.pop(0)       # revisar
         d["calidadSenal"] = campos.pop(0)
         mensaje["GSM"] = d
