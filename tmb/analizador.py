@@ -159,6 +159,9 @@ class ParserP(object):
         if not "7080" in mensaje:
             mensaje["7080"] = {}
         return mensaje["7080"]
+    
+    def _get_bit(self, v):
+        return len(bin(v)[2:])
         
     def _eliminar_campos(self, cc):
         cc.pop(0)
@@ -197,7 +200,7 @@ class ParserP(object):
         if not self._mascara & self.PT100_INTERNAS:
             return       
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.PT100_INTERNAS)
+        d["dispositivos"].append(self._get_bit(self.PT100_INTERNAS))
         i = int(self._mascara & self.TH16)
         sondas = list(float(campos.pop(0)) for i in range(3 + i))
         for t in sondas:
@@ -208,7 +211,7 @@ class ParserP(object):
         if not self._mascara & self.PT100_EXTERNAS:
             return
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.PT100_EXTERNAS)
+        d["dispositivos"].append(self._get_bit(self.PT100_EXTERNAS))
         sondas = list(float(campos.pop(0)) for i in range(3))
         for t in sondas:
             if not t is None:
@@ -224,7 +227,7 @@ class ParserP(object):
         if not self._mascara & self.TRANSCAN:
             return        
         d = self._get_datos_temperatura(mensaje)    
-        d["dispositivos"].append(self.TRANSCAN)
+        d["dispositivos"].append(self._get_bit(self.TRANSCAN))
         sondas = list(float(campos.pop(0)) for i in range(campos.pop(0)))
         for t in sondas:
             if not t is None:
@@ -234,7 +237,7 @@ class ParserP(object):
         if not self._mascara & self.EUROSCAN:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.EUROSCAN)
+        d["dispositivos"].append(self._get_bit(self.EUROSCAN))
         sondas = list(float(campos.pop(0)) for i in range(5))
         for t in sondas:
             if not t is None:
@@ -244,7 +247,7 @@ class ParserP(object):
         if not self._mascara & self.DATACOLD:
             return        
         d = self._get_datos_temperatura(mensaje)        
-        d["dispositivos"].append(self.DATACOLD)
+        d["dispositivos"].append(self._get_bit(self.DATACOLD))
         sondas = list(float(campos.pop(0)) for i in range(4))
         for t in sondas:
             if not t is None:
@@ -264,7 +267,7 @@ class ParserP(object):
         if not self._mascara & self.TOUCHPRINT:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.TOUCHPRINT)
+        d["dispositivos"].append(self._get_bit(self.TOUCHPRINT))
         sondas = list(self._fromTouchprintToCelsius(campos.pop(0)) 
                 for i in range(6))
         for t in sondas:
@@ -280,7 +283,7 @@ class ParserP(object):
         if not self._mascara & self.IBOX:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.IBOX)
+        d["dispositivos"].append(self._get_bit(self.IBOX))
         d["alarmas"] = int(campos.pop(0))
         d["tempRetorno"] = float(campos.pop(0))
         d["tempSuministro"] = float(campos.pop(0))
@@ -294,7 +297,7 @@ class ParserP(object):
         if not self._mascara & self.CARRIER:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.CARRIER)
+        d["dispositivos"].append(self._get_bit(self.CARRIER))
         d["setPoint"] = float(campos.pop(0)) / 10
         d["modoOperacion"] = list(campos.pop(0) for i in range(2))
         d["tempRetorno"] = float(campos.pop(0)) / 10
@@ -306,7 +309,7 @@ class ParserP(object):
         if not self._mascara & self.DAS:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.DAS)
+        d["dispositivos"].append(self._get_bit(self.DAS))
         d["setPoint"] = float(campos.pop(0))
         d["tempRetorno"] = float(campos.pop(0))
         d["tempSuministro"] = float(campos.pop(0))
@@ -315,7 +318,7 @@ class ParserP(object):
         if not self._mascara & self.THERMO_GUARD_VI:
             return
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.THERMO_GUARD_VI)
+        d["dispositivos"].append(self._get_bit(self.THERMO_GUARD_VI))
         d["setPoint"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
         d["tempRetorno"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
         d["tempSuministro"] = self._fromTouchprintToCelsius(
@@ -325,7 +328,7 @@ class ParserP(object):
         if not self._mascara & self.TH12_ONLINE:
             return    
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self.TH12_ONLINE)
+        d["dispositivos"].append(self._get_bit(self.TH12_ONLINE))
         t = float(campos.pop(0))  
         if -30 <= t <= 50:
             d["sondas"].append(self._t)
@@ -696,6 +699,7 @@ def parse(context, texto):
 #            "SCHEMATYPE": "Remolque_Frigorifico",
 #            "REGISTRATION": "R1781BCW"
 #            }
+#    d["maskBin"] = int(d["MASK"][::-1], base=2)
 #    c._dispositivos = dict()
 #    c._dispositivos[21142] = d
 #
