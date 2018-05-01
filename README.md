@@ -1,5 +1,5 @@
 # yaotp
-Yet another telemetry processor
+Yet another open telemetry processor
 
 `yaotp` es un procesador genérico de telemetería, aunque la implementación
 inicial es para dispositivos de la familia TH del fabricante español
@@ -26,8 +26,8 @@ sí- de si el dispositivo va montado sobre una tractora o sobre un remolque.
 - CANBUS 
 - TACÓGRAFO 
 - EBS (*)
-- FRIGO/REEFER (**)
-- Alarmas (*)
+- FRIGORÍFICO (**)
+- Alarmas varias (*)
 
 (*) depende de la configuración del equipo externo recibimos una información
 u otra.
