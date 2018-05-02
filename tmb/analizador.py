@@ -277,7 +277,7 @@ class ParserP(object):
     def _12_digitales(self, campos, mensaje):
         if not self._mascara & self.ENTRADAS_DIGITALES_EXTENDIDAS:
             return   
-        mensaje["entradasDigitales"] = list(campos.pop(0) for i in range(2))
+        mensaje["entradasDigitalesExt"] = list(campos.pop(0) for i in range(2))
              
     def _13_ibox(self, campos, mensaje):
         if not self._mascara & self.IBOX:
@@ -338,9 +338,10 @@ class ParserP(object):
             return
         d = self._get_datos_gps(mensaje)
         d["kilometros"] = round(float(campos.pop(0)))
-        d["entradasDigitales"] = int(campos.pop(0))
+        d["entradasDigitales"] = campos.pop(0)
         v = di.obtener_entradas_digitales(d["entradasDigitales"], 
-                                          self._dispositivo["SCHEMATYPE"])
+                                          self._dispositivo["SCHEMATYPE"],
+                                          self._mascara & self.TH16)
         if not v is None:
             mensaje["DI"] = v        
         
@@ -705,4 +706,22 @@ def parse(context, texto):
 #
 #    
 #    m = "GPRS/SOCKET,21142,TDI*P=21142,22/04/2018,22:08:27,22/04/2018,22:08:27,041:46:14.5972N,001:13:05.8199W,262,0,113,10,639,628,-32768,-32768,-32768,695,0,0,0,39607.0,49,0,00000000000000,000010a100008a,00d39245001000,f,21403,9,11.77,00bc,aee4,CRCd26d"
+#    parse(c, m)
+
+#if __name__ == "__main__":
+#
+#    from context import Context
+#    c = Context()
+#    d = {
+#            "ID_MOVIL": 21587,
+#            "MASK": "11110000001000101000000000000000000000000000011001",
+#            "SCHEMATYPE": "Remolque_Simple",
+#            "REGISTRATION": "R1781BCW"
+#            }
+#    d["maskBin"] = int(d["MASK"][::-1], base=2)
+#    c._dispositivos = dict()
+#    c._dispositivos[21587] = d
+#
+#    
+#    m = "GPRS/SOCKET,21587,TDI*P=21587,01/05/2018,02:23:57,01/05/2018,02:23:57,035:25:54.4693N,084:41:00.8002W,250,113,41,9,1599.7,1200020010000010000000100010,0,310410,7,12.58,0001,ab18,CRCa8ea"
 #    parse(c, m)
