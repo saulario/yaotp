@@ -162,13 +162,18 @@ def remolque_TH21(v):
     di["portonCerrado"] = int(v & 4 != 0)
     return di
 
-def obtener_entradas_digitales(v, esquema):
+def obtener_entradas_digitales(v, esquema, th16):
     log.info("-----> Inicio")
     log.info("\t(v) . . .: %s" % v)
     log.info("\t(esquema): %s" % esquema)
+    log.info("\t(th16)  .: %s" % th16)
     
     if esquema is None:
         log.info("<----- Salida, no hay esquema")
+        return None          
+
+    if th16:
+        log.info("<----- Salida, di th16 no soportadas")
         return None          
     
     if esquema.startswith("Portatil_Simple"):
@@ -217,7 +222,7 @@ def obtener_entradas_digitales(v, esquema):
         f = remolque_TH21           
     else:
         f = comun
-    di = f(v)
+    di = f(int(v))
    
     log.info("<----- Fin")
     return di
