@@ -52,13 +52,28 @@ if __name__ == "__main__":
                 21142,
                 "5906560794897",
                 "sese012127@orange.es",
-                "TDI*BATGETINFOOO")
+                "TDI*GETSTATUS")
         
         res = requests.get(url, params=payload, auth = (
                 cp.get("TDI", "user"),
                 cp.get("TDI", "password")))
         
+        log.info(res.request.url)
         
+        payload = {}
+        payload["pushTarget"] = "GPRSSocketCommFE"
+        payload["content"] = "GPRS/SOCKET,%s,%d,%s,%s,%s" % (
+                uuid.uuid4(),
+                20452,
+                "5906560067920",
+                "sese08935@orange.es",
+                "TDI*BATGETINFO")
+        
+        res = requests.get(url, params=payload, auth = (
+                cp.get("TDI", "user"),
+                cp.get("TDI", "password")))       
+        
+        log.info(res.request.url)
         
         
         
