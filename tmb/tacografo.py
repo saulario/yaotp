@@ -20,8 +20,9 @@ import re
 log = logging.getLogger(__name__)
 
 tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
-                                + "(?P<pais>[A-Z\s]{0,3})"
+                                + "(?P<pais1>[A-Z\s]{0,3})"
                                 + "(?P<cond1>.{0,16})\*"
+                                + "(?P<pais2>[A-Z\s]{0,3})"
                                 + "(?P<cond2>.{0,16})\*$"))
 
 def componer_respuesta(v, t):
