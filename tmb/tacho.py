@@ -20,6 +20,8 @@ import os
 import sys
 
 import requests
+import urllib
+import uuid
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
 YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
@@ -37,10 +39,28 @@ if __name__ == "__main__":
         cp = configparser.ConfigParser()
         cp.read(YAOTP_CONFIG)
                
-        url = ("%s/listvehics" % cp.get("TDI", "url_ws"))
-        res = requests.get(url)
+#        url = ("%s/listvehics" % cp.get("TDI", "url_ws"))
+#        res = requests.get(url)
         
-        log.info(res.json())
+        
+        url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
+        
+        payload = {}
+        payload["pushTarget"] = "GPRSSocketCommFE"
+        payload["content"] = "GPRS/SOCKET,%s,%d,%s,%s,%s" % (
+                uuid.uuid4(),
+                21142,
+                "5906560794897",
+                "sese012127@orange.es",
+                "TDI*BATGETINFOOO")
+        
+        res = requests.get(url, params=payload, auth = (
+                cp.get("TDI", "user"),
+                cp.get("TDI", "password")))
+        
+        
+        
+        
         
     except Exception as e:
         log.error(e)
