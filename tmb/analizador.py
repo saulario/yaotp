@@ -32,15 +32,22 @@ log = logging.getLogger(__name__)
     
 class ParserNULL(object):
     
-    def parse(self, mensaje):
-        return None
+    def __init__(self, c):
+        self._context = c
+    
+    def parse(self, m):
+        mensaje = {}
+        mensaje["tipoMensaje"] = "PENDIENTE"  
+        mensaje["fechaProceso"] = self._context.ahora        
+        mensaje["raw"] = m        
+        return mensaje
 
         
 def parser_factory(context, texto):
     log.info("-----> Inicio")
     log.info("\t(texto): %s" % texto)
     
-    parser = ParserNULL()
+    parser = ParserNULL(context)
     campos = texto.split(",")
     
     if len(campos) < 3:
