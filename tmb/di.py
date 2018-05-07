@@ -14,6 +14,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import itertools
 import logging
 
 log = logging.getLogger(__name__)
@@ -162,19 +163,11 @@ def remolque_TH21(v):
     di["portonCerrado"] = int(v & 4 != 0)
     return di
 
-def obtener_entradas_digitales(v, esquema, th16):
-    log.info("-----> Inicio")
-    log.info("\t(v) . . .: %s" % v)
-    log.info("\t(esquema): %s" % esquema)
-    log.info("\t(th16)  .: %s" % th16)
+def obtener_di_th15(v, esquema):
     
     if esquema is None:
         log.info("<----- Salida, no hay esquema")
-        return None          
-
-    if th16:
-        log.info("<----- Salida, di th16 no soportadas")
-        return None          
+        return None                 
     
     if esquema.startswith("Portatil_Simple"):
         f = portatil_simple
@@ -222,7 +215,57 @@ def obtener_entradas_digitales(v, esquema, th16):
         f = remolque_TH21           
     else:
         f = comun
-    di = f(int(v))
+        
+    return f(int(v))
+
+def obtener_di_th16(v):
+    
+    if len(v) < 28:
+        return None
+
+    i = itertools.count()
+    di = {}
+    di["DI0"] = int(v[next(i)])
+    di["DI1"] = int(v[next(i)])
+    di["DI2"] = int(v[next(i)])
+    di["DI3"] = int(v[next(i)])
+    di["DI4"] = int(v[next(i)])   
+    di["alimentacion"] = int(v[next(i)])
+    di["acelerometro1"] = int(v[next(i)])
+    di["acelerometro2"] = int(v[next(i)])
+    di["activAlimExterna"] = int(v[next(i)])
+    di["alarmaDI0"] = int(v[next(i)])
+    di["alarmaDI1"] = int(v[next(i)])
+    di["alarmaDI2"] = int(v[next(i)])
+    di["alarmaDI3"] = int(v[next(i)])
+    di["alarmaDI4"] = int(v[next(i)])
+    di["alarmaJamming"] = int(v[next(i)])
+    di["despertadoDI0"] = int(v[next(i)])
+    di["despertadoDI1"] = int(v[next(i)])
+    di["despertadoDI2"] = int(v[next(i)])
+    di["despertadoDI3"] = int(v[next(i)])
+    di["despertadoDI4"] = int(v[next(i)])
+    di["despertadoAcelerometro"] = int(v[next(i)])
+    di["despertadoTension"] = int(v[next(i)])
+    di["despertadoAlimExterna"] = int(v[next(i)])
+    di["despertadoTimer"] = int(v[next(i)])
+    di["despertadoPDOWN_FAIL"] = int(v[next(i)])
+    di["reinicioTH16"] = int(v[next(i)])
+    di["gps"] = int(v[next(i)])
+    di["alarmaPuntoPaso"] = int(v[next(i)])
+    
+    return di
+
+def obtener_entradas_digitales(v, esquema, th16):
+    log.info("-----> Inicio")
+    log.info("\t(v) . . .: %s" % v)
+    log.info("\t(esquema): %s" % esquema)
+    log.info("\t(th16)  .: %s" % th16)
+    
+    if th16:
+        di = obtener_di_th16(v)
+    else:
+        di = obtener_di_th15(v, esquema)
    
     log.info("<----- Fin")
-    return di
+    return di   
