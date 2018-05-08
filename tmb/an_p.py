@@ -20,6 +20,7 @@ import re
 
 import canbus
 import di
+import ebs
 import gis
 import tacografo as taco
 
@@ -208,9 +209,11 @@ class ParserP(object):
         for t in sondas:
             if not t is None:
                 d["sondas"].append(t)
-        d["alarmas"] = campos.pop(0)
-        d["entradasDigitales"] = campos.pop(0)
-        d["alarmasEEDD"] = campos.pop(0) # ignorado alarmas eedd
+        d1 = {}
+        d1["alarmas"] = campos.pop(0)
+        d1["entradasDigitales"] = campos.pop(0)
+        d1["alarmasEEDD"] = campos.pop(0) 
+        d["DATACOLD"] = d1
         
     def _fromTouchprintToCelsius(self, t):
         self._temp = float(t) / 10
@@ -239,27 +242,31 @@ class ParserP(object):
         if not self._mascara & self.IBOX:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self._get_bit(self.IBOX))
-        d["alarmas"] = int(campos.pop(0))
+        d["dispositivos"].append(self._get_bit(self.IBOX))        
+        d1 = {}
+        d1["alarmas"] = int(campos.pop(0))
         d["tempRetorno"] = float(campos.pop(0))
         d["tempSuministro"] = float(campos.pop(0))
         d["setPoint"] = float(campos.pop(0))
-        d["horasElectrico"] = float(campos.pop(0))
-        d["horasMotor"] = float(campos.pop(0))
-        d["horasTotales"] = float(campos.pop(0))
-        d["modoOperacion"] = int(campos.pop(0))
+        d1["horasElectrico"] = float(campos.pop(0))
+        d1["horasMotor"] = float(campos.pop(0))
+        d1["horasTotales"] = float(campos.pop(0))
+        d1["modoOperacion"] = int(campos.pop(0))
+        d["IBOX"] = d1
              
     def _14_carrier(self, campos, mensaje):
         if not self._mascara & self.CARRIER:
             return        
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.CARRIER))
+        d1 = {}
         d["setPoint"] = float(campos.pop(0)) / 10
-        d["modoOperacion"] = list(campos.pop(0) for i in range(2))
+        d1["modoOperacion"] = list(campos.pop(0) for i in range(2))
         d["tempRetorno"] = float(campos.pop(0)) / 10
         d["tempSuministro"] = float(campos.pop(0)) / 10
-        d["presion"] = float(campos.pop(0)) / 10
-        d["horasTotales"] = float(campos.pop(0))
+        d1["presion"] = float(campos.pop(0)) / 10
+        d1["horasTotales"] = float(campos.pop(0))
+        d["CARRIER"] = d1
 
     def _15_das(self, campos, mensaje):
         if not self._mascara & self.DAS:
@@ -385,7 +392,7 @@ class ParserP(object):
         if not self._mascara & self.KNORR:
             return
         d = {}
-        d["hrdv"] = campos.pop(0)
+        d["hrvd"] = campos.pop(0)
         d["speed"] = campos.pop(0)
         d["weight"] = campos.pop(0)
         d["brakes"] = campos.pop(0)
@@ -396,7 +403,7 @@ class ParserP(object):
         d["ebsprop7"] = campos.pop(0)
         d["ebsprop8"] = campos.pop(0)
         d["ebsprop9"] = campos.pop(0)                                        
-        mensaje["KNORR"] = d
+        mensaje["EBS"] = ebs.obtener_ebs_knorr(d)
             
     def _28_haldex(self, campos, mensaje):
         if not self._mascara & self.HALDEX:
@@ -406,7 +413,7 @@ class ParserP(object):
         d["pressures"] = campos.pop(0)
         d["odometer"] = campos.pop(0)
         d["3m"] = campos.pop(0)
-        mensaje["HALDEX"] = d
+        mensaje["EBS"] = ebs.obtener_ebs_haldex(d)       
             
     def _29_wabco(self, campos, mensaje):
         if not self._mascara & self.WABCO:
@@ -423,8 +430,8 @@ class ParserP(object):
         d["rge21"] = campos.pop(0)
         d["rge22"] = campos.pop(0)
         d["rge23"] = campos.pop(0)
-        d["hrvd"] = campos.pop(0)
-        mensaje["WABCO"] = d;
+        d["hrdv"] = campos.pop(0)
+        mensaje["EBS"] = ebs.obtener_ebs_wabco(d)
             
     def _30_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080:
@@ -471,7 +478,10 @@ class ParserP(object):
         if not self._mascara & self.NS_CARRIER:
             return
         d = self._get_datos_temperatura(mensaje)
-        d["numeroSerie"] = campos.pop(0)
+        if not "CARRIER" in d:
+            d["CARRIER"] = {}        
+        d1 = d["CARRIER"]
+        d1["numeroSerie"] = campos.pop(0)
                     
     def _38_conductor(self, campos, mensaje):
         if not self._mascara & self.CONDUCTOR:
