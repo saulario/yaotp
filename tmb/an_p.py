@@ -209,9 +209,11 @@ class ParserP(object):
         for t in sondas:
             if not t is None:
                 d["sondas"].append(t)
-        d["alarmas"] = campos.pop(0)
-        d["entradasDigitales"] = campos.pop(0)
-        d["alarmasEEDD"] = campos.pop(0) # ignorado alarmas eedd
+        d1 = {}
+        d1["alarmas"] = campos.pop(0)
+        d1["entradasDigitales"] = campos.pop(0)
+        d1["alarmasEEDD"] = campos.pop(0) 
+        d["DATACOLD"] = d1
         
     def _fromTouchprintToCelsius(self, t):
         self._temp = float(t) / 10
@@ -240,27 +242,31 @@ class ParserP(object):
         if not self._mascara & self.IBOX:
             return        
         d = self._get_datos_temperatura(mensaje)
-        d["dispositivos"].append(self._get_bit(self.IBOX))
-        d["alarmas"] = int(campos.pop(0))
+        d["dispositivos"].append(self._get_bit(self.IBOX))        
+        d1 = {}
+        d1["alarmas"] = int(campos.pop(0))
         d["tempRetorno"] = float(campos.pop(0))
         d["tempSuministro"] = float(campos.pop(0))
         d["setPoint"] = float(campos.pop(0))
-        d["horasElectrico"] = float(campos.pop(0))
-        d["horasMotor"] = float(campos.pop(0))
-        d["horasTotales"] = float(campos.pop(0))
-        d["modoOperacion"] = int(campos.pop(0))
+        d1["horasElectrico"] = float(campos.pop(0))
+        d1["horasMotor"] = float(campos.pop(0))
+        d1["horasTotales"] = float(campos.pop(0))
+        d1["modoOperacion"] = int(campos.pop(0))
+        d["IBOX"] = d1
              
     def _14_carrier(self, campos, mensaje):
         if not self._mascara & self.CARRIER:
             return        
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.CARRIER))
+        d1 = {}
         d["setPoint"] = float(campos.pop(0)) / 10
-        d["modoOperacion"] = list(campos.pop(0) for i in range(2))
+        d1["modoOperacion"] = list(campos.pop(0) for i in range(2))
         d["tempRetorno"] = float(campos.pop(0)) / 10
         d["tempSuministro"] = float(campos.pop(0)) / 10
-        d["presion"] = float(campos.pop(0)) / 10
-        d["horasTotales"] = float(campos.pop(0))
+        d1["presion"] = float(campos.pop(0)) / 10
+        d1["horasTotales"] = float(campos.pop(0))
+        d["CARRIER"] = d1
 
     def _15_das(self, campos, mensaje):
         if not self._mascara & self.DAS:
@@ -472,7 +478,10 @@ class ParserP(object):
         if not self._mascara & self.NS_CARRIER:
             return
         d = self._get_datos_temperatura(mensaje)
-        d["numeroSerie"] = campos.pop(0)
+        if not "CARRIER" in d:
+            d["CARRIER"] = {}        
+        d1 = d["CARRIER"]
+        d1["numeroSerie"] = campos.pop(0)
                     
     def _38_conductor(self, campos, mensaje):
         if not self._mascara & self.CONDUCTOR:
