@@ -20,6 +20,7 @@ import re
 
 import canbus
 import di
+import ebs
 import gis
 import tacografo as taco
 
@@ -385,7 +386,7 @@ class ParserP(object):
         if not self._mascara & self.KNORR:
             return
         d = {}
-        d["hrdv"] = campos.pop(0)
+        d["hrvd"] = campos.pop(0)
         d["speed"] = campos.pop(0)
         d["weight"] = campos.pop(0)
         d["brakes"] = campos.pop(0)
@@ -396,7 +397,7 @@ class ParserP(object):
         d["ebsprop7"] = campos.pop(0)
         d["ebsprop8"] = campos.pop(0)
         d["ebsprop9"] = campos.pop(0)                                        
-        mensaje["KNORR"] = d
+        mensaje["EBS"] = ebs.obtener_ebs_knorr(d)
             
     def _28_haldex(self, campos, mensaje):
         if not self._mascara & self.HALDEX:
@@ -406,7 +407,7 @@ class ParserP(object):
         d["pressures"] = campos.pop(0)
         d["odometer"] = campos.pop(0)
         d["3m"] = campos.pop(0)
-        mensaje["HALDEX"] = d
+        mensaje["EBS"] = ebs.obtener_ebs_haldex(d)       
             
     def _29_wabco(self, campos, mensaje):
         if not self._mascara & self.WABCO:
@@ -423,8 +424,8 @@ class ParserP(object):
         d["rge21"] = campos.pop(0)
         d["rge22"] = campos.pop(0)
         d["rge23"] = campos.pop(0)
-        d["hrvd"] = campos.pop(0)
-        mensaje["WABCO"] = d;
+        d["hrdv"] = campos.pop(0)
+        mensaje["EBS"] = ebs.obtener_ebs_wabco(d)
             
     def _30_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080:
