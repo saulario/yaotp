@@ -28,12 +28,12 @@ from context import Context
 
 YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
 YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
-YAOTP_LOG = ("%s/log/%s.log" % 
+YAOTP_LOG = ("%s/log/%s.log" %
              (YAOTP_HOME, os.path.basename(__file__).split(".")[0]))
 logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
-                    format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")    
+                    format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")
 log = logging.getLogger(__name__)
-    
+
 #
 #
 #
@@ -43,26 +43,26 @@ if __name__ == "__main__":
     """
     log.info("=====> Inicio (%s)" % os.getpid())
     retval = 0
-    
+
     try:
         cp = configparser.ConfigParser()
         cp.read(YAOTP_CONFIG)
-        
+
         context = Context()
         context.home = YAOTP_HOME
         context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
         context.queue = cp.get("TDI", "cola")
         context.user = cp.get("TDI", "user")
         context.password = cp.get("TDI", "password")
-        
+
         context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
         context.db = context.client.get_database(cp.get("MONGO", "db"))
         context.debug = cp.getint("MONGO", "debug")
-    
+
         dispositivos.procesar(context)
         notificaciones.procesar(context)
         mensajes.procesar(context)
-    
+
     except Exception as e:
         log.error(e)
         retval = 1
