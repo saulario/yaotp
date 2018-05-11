@@ -16,7 +16,6 @@
 
 import datetime
 import logging
-import re
 
 import canbus
 import di
@@ -25,11 +24,6 @@ import gis
 import tacografo as taco
 
 log = logging.getLogger(__name__)
-
-tacografo_pattern = re.compile(("^(?P<datos>[a-z0-9]{16})"
-                                + "(?P<pais>[A-Z\s]{0,3})"
-                                + "(?P<cond1>.{0,16})\*"
-                                + "(?P<cond2>.{0,16})\*$"))
 
 class ParserP(object):
     
