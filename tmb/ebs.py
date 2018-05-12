@@ -112,17 +112,17 @@ def obtener_ebs_knorr(raw):
     ebs = {}
     ebs["KNORR"] = raw
     aux = obtener_velocidad_knorr(raw)
-    if aux:
+    if not aux is None:
         ebs["velocidad"] = aux
     aux = obtener_frenos_knorr(raw)          
-    if aux:
+    if not aux is None:
         ebs["frenos"] = aux
     aux = obtener_hrvd_knorr(raw)
-    if aux:
+    if not aux is None:
         ebs["hrvd"] = aux
     aux = obtener_peso_knorr(raw)
-    if aux:
-        ebs["peso"] = 0
+    if not aux is None:
+        ebs["peso"] = aux
     return ebs
 
 def obtener_ebs_wabco(raw):
