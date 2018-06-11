@@ -28,6 +28,9 @@ def procesar(context):
     res = requests.get("%sinfoTarget=%s" % (context.url, context.queue), 
              auth=(context.user, context.password))        
     dispositivos = res.json()
+    
+    dispositivosCol = context.db.get_collection("dispositivos")
+    dispositivosCol.delete_many({})    
        
     key = "INFO_DEVICE"
     if key in dispositivos:
@@ -37,5 +40,7 @@ def procesar(context):
             dispositivo["maskBin"] = int(dispositivo["MASK"][::-1], base=2)
             dispositivo["maskextBin"] = int(dispositivo["MASKEXT"][::-1], 
                        base=2)
+            
+            dispositivosCol.insert_one(dispositivo)
             
     log.info("<----- Fin")
