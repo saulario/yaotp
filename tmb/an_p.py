@@ -76,7 +76,12 @@ class ParserP(object):
     CRC                             = 1 << 46
     LLS20160                        = 1 << 47
     INTELLISET                      = 1 << 48
-    TH16                            = 1 << 49
+    TH16                            = 1 << 49       # 50
+    HWASUNG_THERMO                  = 1 << 50
+    APACHE                          = 1 << 51
+    CARRIER_PARTNER                 = 1 << 52
+    CARRIER_3RD_PARTY               = 1 << 53
+    TRANSCAN_ADVANCE                = 1 << 54
 
     def __init__(self, context, dispositivo):
         self._context = context
@@ -173,18 +178,37 @@ class ParserP(object):
             return
         mensaje["analogicInput"] = list(float(campos.pop(0)) 
                 for i in range(int(campos.pop(0))))
-        
-    def _08_transcan(self, campos, mensaje):
+
+    def _08_apache(self, campos, mensaje):
+        if not self._mascara & self.APACHE:
+            return
+        d = self._get_datos_temperatura(mensaje)    
+        d["dispositivos"].append(self._get_bit(self.APACHE))
+        d["sondas"] = list(float(campos.pop(0)) for i in range(2))
+
+    def _09_transcan(self, campos, mensaje):
         if not self._mascara & self.TRANSCAN:
             return        
         d = self._get_datos_temperatura(mensaje)    
         d["dispositivos"].append(self._get_bit(self.TRANSCAN))
-        sondas = list(float(campos.pop(0)) for i in range(campos.pop(0)))
+        sondas = list(float(campos.pop(0)) for i in range(int(self._dispositivo["TRASCANCHANNELS"])))
         for t in sondas:
             if not t is None:
                 d["sondas"].append(t)
-        
-    def _09_euroscan(self, campos, mensaje):
+
+    def _10_transcan_advance(self, campos, mensaje):
+        if not self._mascara & self.TRANSCAN_ADVANCE:
+            return
+        d = self._get_datos_temperatura(mensaje)    
+        d["dispositivos"].append(self._get_bit(self.TRANSCAN_ADVANCE))
+        d["sondas"] = list(float(campos.pop(0)) for i in range(8))
+        d1 = {}
+        d1["humedad"] = campos.pop(0)
+        d1["entradas"] = campos.pop(0)
+        d1["alarmas"] = campos.pop(0)
+        d["TRANSCAN_ADVANCE"] = d1
+
+    def _11_euroscan(self, campos, mensaje):
         if not self._mascara & self.EUROSCAN:
             return        
         d = self._get_datos_temperatura(mensaje)
@@ -194,7 +218,7 @@ class ParserP(object):
             if not t is None:
                 d["sondas"].append(t)
                 
-    def _10_datacold(self, campos, mensaje):
+    def _12_datacold(self, campos, mensaje):
         if not self._mascara & self.DATACOLD:
             return        
         d = self._get_datos_temperatura(mensaje)        
@@ -216,7 +240,7 @@ class ParserP(object):
             self._temp = None
         return self._temp
 
-    def _11_touchprint(self, campos, mensaje):
+    def _13_touchprint(self, campos, mensaje):
         if not self._mascara & self.TOUCHPRINT:
             return        
         d = self._get_datos_temperatura(mensaje)
@@ -227,12 +251,12 @@ class ParserP(object):
             if not t is None:
                 d["sondas"].append(t)
         
-    def _12_digitales(self, campos, mensaje):
+    def _14_digitales(self, campos, mensaje):
         if not self._mascara & self.ENTRADAS_DIGITALES_EXTENDIDAS:
             return   
         mensaje["entradasDigitalesExt"] = list(campos.pop(0) for i in range(2))
              
-    def _13_ibox(self, campos, mensaje):
+    def _15_ibox(self, campos, mensaje):
         if not self._mascara & self.IBOX:
             return        
         d = self._get_datos_temperatura(mensaje)
@@ -247,8 +271,28 @@ class ParserP(object):
         d1["horasTotales"] = float(campos.pop(0))
         d1["modoOperacion"] = int(campos.pop(0))
         d["IBOX"] = d1
+
+    def _16_hwasung_termo(self, campos, mensaje):
+        if not self._mascara & self.HWASUNG_THERMO:
+            return
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self._get_bit(self.HWASUNG_THERMO))        
+        d1 = {}                 
+        d["zonas"] = []
+        z0 = {}
+        z1 = {}
+        d["zonas"].append(z0)
+        d["zonas"].append(z1)
+        z0["setPoint"] = float(campos.pop(0))
+        z0["tempRetorno"] = float(campos.pop(0))
+        z1["setPoint"] = float(campos.pop(0))
+        z1["tempRetorno"] = float(campos.pop(0))
+        d1["horasTotales"] = float(campos.pop(0))
+        d1["voltaje"] = float(campos.pop(0))
+        d1["motorEncendido"] = float(campos.pop(0))
+        d["HWASUNG_THERMO"] = d1
              
-    def _14_carrier(self, campos, mensaje):
+    def _17_carrier(self, campos, mensaje):
         if not self._mascara & self.CARRIER:
             return        
         d = self._get_datos_temperatura(mensaje)
@@ -257,12 +301,134 @@ class ParserP(object):
         d["setPoint"] = float(campos.pop(0)) / 10
         d1["modoOperacion"] = list(campos.pop(0) for i in range(2))
         d["tempRetorno"] = float(campos.pop(0)) / 10
-        d["tempSuministro"] = float(campos.pop(0)) / 10
+        try:
+            d["tempSuministro"] = float(campos.pop(0)) / 10
+        except ValueError:
+            d["tempSuministro"] = float("nan")
         d1["presion"] = float(campos.pop(0)) / 10
         d1["horasTotales"] = float(campos.pop(0))
         d["CARRIER"] = d1
 
-    def _15_das(self, campos, mensaje):
+    def _18_carrier_3rd_party(self, campos, mensaje):
+        if not self._mascara & self.CARRIER_3RD_PARTY:
+            return
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self._get_bit(self.CARRIER_3RD_PARTY))
+        d1 = {}                 
+        d["zonas"] = []
+        z0 = {}
+        z1 = {}
+        z2 = {}
+        d["zonas"].append(z0)
+        d["zonas"].append(z1)
+        d["zonas"].append(z2)
+        z0["setPoint"] = float(campos.pop(0)) / 32
+        z1["setPoint"] = float(campos.pop(0)) / 32
+        z2["setPoint"] = float(campos.pop(0)) / 32
+        d1["pf0"] = campos.pop(0)
+        d1["pf1"] = campos.pop(0)
+        z0["tempRetorno"] = float(campos.pop(0)) / 32
+        z1["tempRetorno"] = float(campos.pop(0)) / 32
+        z2["tempRetorno"] = float(campos.pop(0)) / 32                
+        z0["tempSuministro"] = float(campos.pop(0)) / 32
+        z1["tempSuministro"] = float(campos.pop(0)) / 32
+        z2["tempSuministro"] = float(campos.pop(0)) / 32
+        d1["presion"] = float(campos.pop(0)) / 32
+        d1["horasTotales"] = float(campos.pop(0))
+        d["CARRIER_3RD_PARTY"] = d1
+
+    def _19_carrier_partner(self, campos, mensaje):
+        if not self._mascara & self.CARRIER_PARTNER:
+            return
+        d = self._get_datos_temperatura(mensaje)
+        d["dispositivos"].append(self._get_bit(self.CARRIER_PARTNER))
+        d["sondas"] = list(campos.pop(0) for i in range(4))
+        d["zonas"] = []
+        z0 = {}
+        z1 = {}
+        z2 = {}
+        d["zonas"].append(z0)
+        d["zonas"].append(z1)
+        d["zonas"].append(z2)
+        d1 = {}                 
+        d1["digitalSensor"] = campos.pop(0)
+        d1["FridgeCompartmentsAvailability"] = campos.pop(0)
+        d1["FridgeRunMode"] = int(campos.pop(0))
+        d1["FridgePowerMode"] = int(campos.pop(0))
+        d1["FridgeSpeedMode"] = int(campos.pop(0))
+        d1["FridgeBattery"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:
+            d1["FridgeBattery"]["state"] = aux[0]
+            d1["FridgeBattery"]["voltage"] = float(aux[1])
+        d1["FridgeFuel"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeFuel"]["state"] = aux[0]
+            d1["FridgeFuel"]["level"] = float(aux[1])
+        d1["FridgeAmbientTemperature"] = float(campos.pop(0))
+
+        # en cada zona simplifico poniendo setpoint y retorno de la sonda 1
+        # aunque parece que aquí habría que hacer un zonas genérico y un zonas de fabricante
+        z0["FridgeCompartmentState"] = int(campos.pop(0))
+        z0["FridgeCompartmentMode"] = int(campos.pop(0))
+        z0["setPoint"] = float(campos.pop(0))
+        z0["FridgeCompartmentSupplyAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor1"] = float(aux[0])
+            z0["tempSuministro"] = float(aux[0])
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor2"] = float(aux[1])
+        z0["FridgeCompartmentReturnAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentReturnAirSensor"]["sensor1"] = float(aux[0])
+            z0["tempRetorno"] = float(aux[0])
+            d1["FridgeCompartmentReturnAirSensor"]["sensor2"] = float(aux[1])
+        z0["FridgeCompartmentEvaporatorTemperature"] = float(campos.pop(0))
+
+        z1["FridgeCompartmentState"] = int(campos.pop(0))
+        z1["FridgeCompartmentMode"] = int(campos.pop(0))
+        z1["setPoint"] = float(campos.pop(0))
+        z1["FridgeCompartmentSupplyAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor1"] = float(aux[0])
+            z1["tempSuministro"] = float(aux[0])
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor2"] = float(aux[1])
+        z1["FridgeCompartmentReturnAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentReturnAirSensor"]["sensor1"] = float(aux[0])
+            z1["tempRetorno"] = float(aux[0])
+            d1["FridgeCompartmentReturnAirSensor"]["sensor2"] = float(aux[1])
+        z1["FridgeCompartmentEvaporatorTemperature"] = float(campos.pop(0))
+
+        z2["FridgeCompartmentState"] = int(campos.pop(0))
+        z2["FridgeCompartmentMode"] = int(campos.pop(0))
+        z2["setPoint"] = float(campos.pop(0))
+        z2["FridgeCompartmentSupplyAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor1"] = float(aux[0])
+            z2["tempSuministro"] = float(aux[0])
+            d1["FridgeCompartmentSupplyAirSensor"]["sensor2"] = float(aux[1])
+        z2["FridgeCompartmentReturnAirSensor"] = {}
+        aux = campos.pop(0).split(";")
+        if len(aux) == 2:        
+            d1["FridgeCompartmentReturnAirSensor"]["sensor1"] = float(aux[0])
+            z2["tempRetorno"] = float(aux[0])
+            d1["FridgeCompartmentReturnAirSensor"]["sensor2"] = float(aux[1])
+        z2["FridgeCompartmentEvaporatorTemperature"] = float(campos.pop(0))
+
+        d1["FridgeHoursElectric"] = float(campos.pop(0))
+        d1["FridgeHoursStandby"] = float(campos.pop(0))
+        d1["FridgeHoursDiesel"] = float(campos.pop(0))
+        d1["horasTotales"] = d1["FridgeHoursElectric"] + d1["FridgeHoursStandby"] + d1["FridgeHoursDiesel"]
+
+        d["CARRIER_PARTNER"] = d1
+
+    def _20_das(self, campos, mensaje):
         if not self._mascara & self.DAS:
             return        
         d = self._get_datos_temperatura(mensaje)
@@ -271,7 +437,7 @@ class ParserP(object):
         d["tempRetorno"] = float(campos.pop(0))
         d["tempSuministro"] = float(campos.pop(0))
         
-    def _16_thermo_guard_vi(self, campos, mensaje):
+    def _21_thermo_guard_vi(self, campos, mensaje):
         if not self._mascara & self.THERMO_GUARD_VI:
             return
         d = self._get_datos_temperatura(mensaje)
@@ -281,16 +447,16 @@ class ParserP(object):
         d["tempSuministro"] = self._fromTouchprintToCelsius(
                 float(campos.pop(0)))
         
-    def _17_th12online(self, campos, mensaje):
+    def _22_th12online(self, campos, mensaje):
         if not self._mascara & self.TH12_ONLINE:
             return    
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.TH12_ONLINE))
         t = float(campos.pop(0))  
         if -30 <= t <= 50:
-            d["sondas"].append(self._t)
+            d["sondas"].append(t)
                     
-    def _18_datos_gps(self, campos, mensaje):
+    def _23_datos_gps(self, campos, mensaje):
         if not self._mascara & self.DATOS_GPS:
             return
         d = self._get_datos_gps(mensaje)
@@ -302,19 +468,19 @@ class ParserP(object):
         if not v is None:
             mensaje["DI"] = v        
         
-    def _19_contador(self, campos, mensaje):
+    def _24_contador(self, campos, mensaje):
         if not self._mascara & self.CONTADOR:
             return    
         mensaje["kilometros"] = float(campos.pop(0))        
 
-    def _20_mantenimiento(self, campos, mensaje):
+    def _25_mantenimiento(self, campos, mensaje):
         current = self._mascara & self.PANTALLA
         aux = self._mascara & self.LECTOR_DE_TARJETAS        
         if not current and not aux:
             return    
         mensaje["mantenimiento"] = campos.pop(0)
         
-    def _21_canbus(self, campos, mensaje):
+    def _26_canbus(self, campos, mensaje):
         if not self._mascara & self.CANBUS:
             return    
         d = self._get_datos_canbus(mensaje)
@@ -333,7 +499,7 @@ class ParserP(object):
         if not v is None:
             d["tempFuel"] = v            
 
-    def _22_canbus_horas(self, campos, mensaje):
+    def _27_canbus_horas(self, campos, mensaje):
         if not self._mascara & self.CANBUS_HORAS:
             return    
         d = self._get_datos_canbus(mensaje)
@@ -341,7 +507,7 @@ class ParserP(object):
         if not v is None:
             d["horas"] = v
         
-    def _23_canbus_fuel(self, campos, mensaje):
+    def _28_canbus_fuel(self, campos, mensaje):
         if not self._mascara & self.CANBUS_FUEL:
             return    
         d = self._get_datos_canbus(mensaje)
@@ -349,7 +515,7 @@ class ParserP(object):
         if not v is None:
             d["combustible"] = v
 
-    def _24_canbus_extendido(self, campos, mensaje):
+    def _29_canbus_extendido(self, campos, mensaje):
         if not self._mascara & self.CANBUS_EXTENDIDO:
             return    
         d = self._get_datos_canbus(mensaje)
@@ -363,7 +529,7 @@ class ParserP(object):
         d["display"] = campos.pop(0)
         d["peso"] = campos.pop(0)
 
-    def _25_canbus_fms3(self, campos, mensaje):
+    def _30_canbus_fms3(self, campos, mensaje):
         if not self._mascara & self.CANBUS_FMS3:
             return    
         d = self._get_datos_canbus(mensaje)
@@ -374,7 +540,7 @@ class ParserP(object):
         d["etc2"] = campos.pop(0)
         d["asc4"] = campos.pop(0)
                 
-    def _26_glp_iveco_euro5(self, campos, mensaje):
+    def _31_glp_iveco_euro5(self, campos, mensaje):
         if not self._mascara & self.GLP_IVECO_EURO5:
             return
         d = {}
@@ -382,7 +548,7 @@ class ParserP(object):
         d["mp3msg2"] = campos.pop(0)
         mensaje["IVECO"] = d
             
-    def _27_knorr(self, campos, mensaje):
+    def _32_knorr(self, campos, mensaje):
         if not self._mascara & self.KNORR:
             return
         d = {}
@@ -399,7 +565,7 @@ class ParserP(object):
         d["ebsprop9"] = campos.pop(0)                                        
         mensaje["EBS"] = ebs.obtener_ebs_knorr(d)
             
-    def _28_haldex(self, campos, mensaje):
+    def _33_haldex(self, campos, mensaje):
         if not self._mascara & self.HALDEX:
             return
         d = {}
@@ -409,7 +575,7 @@ class ParserP(object):
         d["3m"] = campos.pop(0)
         mensaje["EBS"] = ebs.obtener_ebs_haldex(d)       
             
-    def _29_wabco(self, campos, mensaje):
+    def _34_wabco(self, campos, mensaje):
         if not self._mascara & self.WABCO:
             return
         d = {}
@@ -427,7 +593,7 @@ class ParserP(object):
         d["hrdv"] = campos.pop(0)
         mensaje["EBS"] = ebs.obtener_ebs_wabco(d)
             
-    def _30_7080(self, campos, mensaje):
+    def _35_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080:
             return
         d = self._get_datos_7080(mensaje)    
@@ -435,7 +601,7 @@ class ParserP(object):
         d["velocidad"] = float(campos.pop(0))
         d["rpm"] = float(campos.pop(0))
         
-    def _31_informacion_gsm(self, campos, mensaje):
+    def _36_informacion_gsm(self, campos, mensaje):
         if not self._mascara & self.INFORMACION_GSM:
             return
         d = {}    
@@ -444,31 +610,31 @@ class ParserP(object):
         d["calidadSenal"] = campos.pop(0)
         mensaje["GSM"] = d
                 
-    def _32_id_movil_slave(self, campos, mensaje):
+    def _37_id_movil_slave(self, campos, mensaje):
         pass
     
-    def _33_master(self, campos, mensaje):
+    def _38_master(self, campos, mensaje):
         if not self._mascara & self.MASTER:
             return
         raise RuntimeError("33_master no implementado")
                     
-    def _34_trailer_7080(self, campos, mensaje):
+    def _39_trailer_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080_TRAILER:
             return            
         d = self._get_datos_7080(mensaje)
         d["idEsclavo"] = campos.pop(0)
         
-    def _35_ibutton(self, campos, mensaje):
+    def _40_ibutton(self, campos, mensaje):
         if not self._mascara & self.IBUTTON:
             return            
         mensaje["IBUTTON"] = campos.pop(0)
         
-    def _36_palfinger(self, campos, mensaje):
+    def _41_palfinger(self, campos, mensaje):
         if not self._mascara & self.PALFINGER:
             return
         mensaje["PALFINGER"] = campos.pop(0)
                     
-    def _37_ns_carrier(self, campos, mensaje):
+    def _42_ns_carrier(self, campos, mensaje):
         if not self._mascara & self.NS_CARRIER:
             return
         d = self._get_datos_temperatura(mensaje)
@@ -477,25 +643,25 @@ class ParserP(object):
         d1 = d["CARRIER"]
         d1["numeroSerie"] = campos.pop(0)
                     
-    def _38_conductor(self, campos, mensaje):
+    def _43_conductor(self, campos, mensaje):
         if not self._mascara & self.CONDUCTOR:
             return
         d = self._get_datos_conductores(mensaje)
         d["id1"] = campos.pop(0)
                     
-    def _39_doble_conductor(self, campos, mensaje):
+    def _44_doble_conductor(self, campos, mensaje):
         if not self._mascara & self.DOBLE_CONDUCTOR:
             return
         d = self._get_datos_conductores(mensaje)
         d["id1"] = campos.pop(0)        
         d["id2"] = campos.pop(0)
                     
-    def _40_alarma_puerta_slave(self, campos, mensaje):
+    def _45_alarma_puerta_slave(self, campos, mensaje):
         if not self._mascara & self.ALARMA_PUERTA_SLAVE:
             return
         mensaje["alarmaPuertaSlave"] = campos.pop(0)
 
-    def _41_lls20160(self, campos, mensaje):
+    def _46_lls20160(self, campos, mensaje):
         if not self._mascara & self.LLS20160:
             return
         d = {}
@@ -505,20 +671,23 @@ class ParserP(object):
         d["fuelSonda1"] = float(campos.pop(0))
         mensaje["LLS20160"] = d
                     
-    def _42_salidas_digitales(self, campos, mensaje):
+    def _47_salidas_digitales(self, campos, mensaje):
         if not self._mascara & self.SALIDAS_DIGITALES:
             return
         mensaje["salidasDigitales"] = campos.pop(0)
                     
-    def _43_bloque_almacenamiento(self, campos, mensaje):
+    def _48_bloque_almacenamiento(self, campos, mensaje):
         if not self._mascara & self.BLOQUE_ALMACENAMIENTO:
             return
         mensaje["salidasDigitales"] = campos.pop(0)
                     
-    def _44_power_supply(self, campos, mensaje):
+    def _49_power_supply(self, campos, mensaje):
         if not self._mascara & self.POWER_SUPPLY:
             return
-        mensaje["alimentacion"] = float(campos.pop(0))
+        try:
+            mensaje["alimentacion"] = float(campos.pop(0))
+        except ValueError:
+            mensaje["alimentacion"] = float("nan")
                     
     def _45_intelliset(self, campos, mensaje):
         if not self._mascara & self.INTELLISET:
@@ -548,6 +717,9 @@ class ParserP(object):
             mensaje["dbgMensaje"] = texto
               
         self._eliminar_campos(campos)
+
+        if ",texto a buscar," in texto:
+            log.info(texto)
         
         self._01_identificador(campos, mensaje)             # 01
         self._02_fecha_hora(campos, mensaje)                # 02
@@ -557,62 +729,56 @@ class ParserP(object):
         
         self._06_pt100_externas(campos, mensaje)            # 06
         self._07_entradas_analogicas(campos, mensaje)       # 07
+        self._08_apache(campos, mensaje)                    # 08 apache
+        self._09_transcan(campos, mensaje)                  # 09
+        self._10_transcan_advance(campos, mensaje)          # 10 Transcan Advance
 
-                                                            # 08 apache
+        self._11_euroscan(campos, mensaje)                  # 11
+        self._12_datacold(campos, mensaje)                  # 12       
+        self._13_touchprint(campos, mensaje)                # 13
+        self._14_digitales(campos, mensaje)                 # 14
+        self._15_ibox(campos, mensaje)                      # 15
 
-        self._08_transcan(campos, mensaje)                  # 09
-
-                                                            # 10 Transcan Advance
-
-        self._09_euroscan(campos, mensaje)                  # 11
-        self._10_datacold(campos, mensaje)                  # 12       
-        self._11_touchprint(campos, mensaje)                # 13
-        self._12_digitales(campos, mensaje)                 # 14
-        self._13_ibox(campos, mensaje)                      # 15
-
-                                                            # 16 hwasung thermo
-
-        self._14_carrier(campos, mensaje)                   # 17
-
-                                                            # 18 Carrier third party
-                                                            # 19 Carrier partner
-
-        self._15_das(campos, mensaje)                       # 20
+        self._16_hwasung_termo(campos, mensaje)             # 16 hwasung thermo
+        self._17_carrier(campos, mensaje)                   # 17
+        self._18_carrier_3rd_party(campos, mensaje)         # 18 Carrier third party
+        self._19_carrier_partner(campos, mensaje)           # 19 Carrier partner
+        self._20_das(campos, mensaje)                       # 20
         
-        self._16_thermo_guard_vi(campos, mensaje)           # 21
-        self._17_th12online(campos, mensaje)                # 22
-        self._18_datos_gps(campos, mensaje)                 # 23
-        self._19_contador(campos, mensaje)                  # 24
-        self._20_mantenimiento(campos, mensaje)             # 25
+        self._21_thermo_guard_vi(campos, mensaje)           # 21
+        self._22_th12online(campos, mensaje)                # 22
+        self._23_datos_gps(campos, mensaje)                 # 23
+        self._24_contador(campos, mensaje)                  # 24
+        self._25_mantenimiento(campos, mensaje)             # 25
         
-        self._21_canbus(campos, mensaje)                    # 26
-        self._22_canbus_horas(campos, mensaje)              # 27
-        self._23_canbus_fuel(campos, mensaje)               # 28
-        self._24_canbus_extendido(campos, mensaje)          # 29
-        self._25_canbus_fms3(campos, mensaje)               # 30
+        self._26_canbus(campos, mensaje)                    # 26
+        self._27_canbus_horas(campos, mensaje)              # 27
+        self._28_canbus_fuel(campos, mensaje)               # 28
+        self._29_canbus_extendido(campos, mensaje)          # 29
+        self._30_canbus_fms3(campos, mensaje)               # 30
 
-        self._26_glp_iveco_euro5(campos, mensaje)           # 31
-        self._27_knorr(campos, mensaje)                     # 32
-        self._28_haldex(campos, mensaje)                    # 33
-        self._29_wabco(campos, mensaje)                     # 34
-        self._30_7080(campos, mensaje)                      # 35
+        self._31_glp_iveco_euro5(campos, mensaje)           # 31
+        self._32_knorr(campos, mensaje)                     # 32
+        self._33_haldex(campos, mensaje)                    # 33
+        self._34_wabco(campos, mensaje)                     # 34
+        self._35_7080(campos, mensaje)                      # 35
 
-        self._31_informacion_gsm(campos, mensaje)           # 36
-        self._32_id_movil_slave(campos, mensaje)            # 37
-        self._33_master(campos, mensaje)                    # 38
-        self._34_trailer_7080(campos, mensaje)              # 39
-        self._35_ibutton(campos, mensaje)                   # 40
+        self._36_informacion_gsm(campos, mensaje)           # 36
+        self._37_id_movil_slave(campos, mensaje)            # 37
+        self._38_master(campos, mensaje)                    # 38
+        self._39_trailer_7080(campos, mensaje)              # 39
+        self._40_ibutton(campos, mensaje)                   # 40
 
-        self._36_palfinger(campos, mensaje)                 # 41
-        self._37_ns_carrier(campos, mensaje)                # 42
-        self._38_conductor(campos, mensaje)                 # 43
-        self._39_doble_conductor(campos, mensaje)           # 44
-        self._40_alarma_puerta_slave(campos, mensaje)       # 45
+        self._41_palfinger(campos, mensaje)                 # 41
+        self._42_ns_carrier(campos, mensaje)                # 42
+        self._43_conductor(campos, mensaje)                 # 43
+        self._44_doble_conductor(campos, mensaje)           # 44
+        self._45_alarma_puerta_slave(campos, mensaje)       # 45
 
-        self._41_lls20160(campos, mensaje)                  # 46
-        self._42_salidas_digitales(campos, mensaje)         # 47
-        self._43_bloque_almacenamiento(campos, mensaje)     # 48
-        self._44_power_supply(campos, mensaje)              # 49
+        self._46_lls20160(campos, mensaje)                  # 46
+        self._47_salidas_digitales(campos, mensaje)         # 47
+        self._48_bloque_almacenamiento(campos, mensaje)     # 48
+        self._49_power_supply(campos, mensaje)              # 49
         self._45_intelliset(campos, mensaje)                # 50
         
         self._99_finales(campos, mensaje)

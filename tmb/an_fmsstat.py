@@ -16,17 +16,34 @@
 
 class ParserFMSSTATGET(object):
     
-    def __init__(self, c, d):
-        self._context = c
-        self._dispositivo = d
+    def __init__(self, context, dispositivo):
+        self._context = context
+        self._dispositivo = dispositivo
     
-    def parse(self, m):
+    def _eliminar_campos(self, cc):
+        cc.pop(0)
+        cc.pop(0) 
+
+    def parse(self, texto):
+        campos = texto.split(",")
         mensaje = {}
         mensaje["idDispositivo"] = self._dispositivo["ID_MOVIL"]
         mensaje["matricula"] = self._dispositivo["REGISTRATION"]
         mensaje["tipoMensaje"] = "TDI*FMSSTATGET"  
         mensaje["fechaProceso"] = self._context.ahora
+
+        mensaje["raw"] = texto                  # TODO ELIMINAR!!
+
+        if self._context.debug == mensaje["idDispositivo"]:
+            mensaje["dbgMascara"] = self._dispositivo["maskBin"]
+            mensaje["dbgMensaje"] = texto        
+
+        self._eliminar_campos(campos)
         
-        mensaje["raw"] = m
+    
+
+
+
+
         
         return mensaje

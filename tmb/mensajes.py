@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 def procesar(context):
     while True:
         procesarImpl(context)
-        time.sleep(5)
+        time.sleep(1)
 
 def procesarImpl(context):
     res = requests.get("%smultipullTarget=%s&multipullMax=%s" 

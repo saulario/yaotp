@@ -60,7 +60,7 @@ if __name__ == "__main__":
         context.db = context.client.get_database(cp.get("MONGO", "db"))
         context.debug = cp.getint("MONGO", "debug")
 
-        dispositivos.procesar(context)
+        # dispositivos.procesar(context)
         # notificaciones.procesar(context) 
         mensajes.procesar(context)
 
