@@ -23,8 +23,8 @@ def procesar(context):
     """Procesamiento de las notificaciones de los dispositivos asociados a la cola
     """
     log.info("-----> Inicio")
-    res = requests.get("%smultipullTarget=%s&multipullMax=100" 
-                       % (context.url, "Notifications"+ context.queue), 
+    res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
+                       % (context.url, "Notifications"+ context.queue, context.batch_size), 
              auth=(context.user, context.password))              
     mensajes = res.text.splitlines()
     

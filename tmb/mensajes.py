@@ -14,8 +14,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import logging
 import requests
+import time
 
 import analizador
 
@@ -24,18 +26,24 @@ log = logging.getLogger(__name__)
 #
 #
 #
+
 def procesar(context):
-    log.info("-----> Inicio")
-    
-    res = requests.get("%smultipullTarget=%s&multipullMax=100" 
-                       % (context.url, context.queue), 
+    while True:
+        procesarImpl(context)
+        time.sleep(5)
+
+def procesarImpl(context):
+    res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
+                       % (context.url, context.queue, context.batch_size), 
              auth=(context.user, context.password))              
     mensajes = res.text.splitlines()
-    
+
+    t1 = datetime.datetime.now()
     for texto in mensajes:
         procesar_mensaje(context, texto)
-    
-    log.info("<----- Fin")
+    t1 = datetime.datetime.now() - t1
+
+    log.info("\tProcesados %s mensajes en %s segundos" % (len(mensajes), t1))
     
 #
 #
@@ -46,9 +54,6 @@ def enviar_mq(context, idMensaje):
 #
 #    
 def procesar_mensaje(context, texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s " % texto)
-        
     try:
         mensaje = analizador.parse(context, texto)
         if not mensaje is None:
@@ -57,5 +62,3 @@ def procesar_mensaje(context, texto):
     except Exception as e:
         log.error(e)
         log.error("*** ignorando mensaje %s" % texto)
-    
-    log.info("<----- Fin")

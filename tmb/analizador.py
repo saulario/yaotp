@@ -44,8 +44,8 @@ class ParserNULL(object):
 
         
 def parser_factory(context, texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s" % texto)
+    log.debug("-----> Inicio")
+    log.debug("\t(texto): %s" % texto)
     
     parser = ParserNULL(context)
     campos = texto.split(",")
@@ -73,16 +73,16 @@ def parser_factory(context, texto):
     elif tipo.startswith("TDI*FMSSTATSGET"):
         parser = ParserFMSSTATGET(context, dispositivo)
         
-    log.info("<----- Fin")
+    log.debug("<----- Fin")
     return parser
 
 def parse(context, texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s" % texto)
+    log.debug("-----> Inicio")
+    log.debug("\t(texto): %s" % texto)
     
-    mensaje = parser_factory(context, texto).parse(texto);
+    mensaje = parser_factory(context, texto).parse(texto)
         
-    log.info("<----- Fin")        
+    log.debug("<----- Fin")        
     return mensaje
 
 #if __name__ == "__main__":

@@ -549,59 +549,71 @@ class ParserP(object):
               
         self._eliminar_campos(campos)
         
-        self._01_identificador(campos, mensaje)
-        self._02_fecha_hora(campos, mensaje)
-        self._03_fecha_hora1(campos, mensaje)
-        self._04_datos_gps(campos, mensaje)
-        self._05_pt100_internas(campos, mensaje) 
+        self._01_identificador(campos, mensaje)             # 01
+        self._02_fecha_hora(campos, mensaje)                # 02
+        self._03_fecha_hora1(campos, mensaje)               # 03
+        self._04_datos_gps(campos, mensaje)                 # 04
+        self._05_pt100_internas(campos, mensaje)            # 05
         
-        self._06_pt100_externas(campos, mensaje)
-        self._07_entradas_analogicas(campos, mensaje)
-        self._08_transcan(campos, mensaje)
-        self._09_euroscan(campos, mensaje)
-        self._10_datacold(campos, mensaje)
+        self._06_pt100_externas(campos, mensaje)            # 06
+        self._07_entradas_analogicas(campos, mensaje)       # 07
+
+                                                            # 08 apache
+
+        self._08_transcan(campos, mensaje)                  # 09
+
+                                                            # 10 Transcan Advance
+
+        self._09_euroscan(campos, mensaje)                  # 11
+        self._10_datacold(campos, mensaje)                  # 12       
+        self._11_touchprint(campos, mensaje)                # 13
+        self._12_digitales(campos, mensaje)                 # 14
+        self._13_ibox(campos, mensaje)                      # 15
+
+                                                            # 16 hwasung thermo
+
+        self._14_carrier(campos, mensaje)                   # 17
+
+                                                            # 18 Carrier third party
+                                                            # 19 Carrier partner
+
+        self._15_das(campos, mensaje)                       # 20
         
-        self._11_touchprint(campos, mensaje)
-        self._12_digitales(campos, mensaje)
-        self._13_ibox(campos, mensaje)
-        self._14_carrier(campos, mensaje)
-        self._15_das(campos, mensaje)
+        self._16_thermo_guard_vi(campos, mensaje)           # 21
+        self._17_th12online(campos, mensaje)                # 22
+        self._18_datos_gps(campos, mensaje)                 # 23
+        self._19_contador(campos, mensaje)                  # 24
+        self._20_mantenimiento(campos, mensaje)             # 25
         
-        self._16_thermo_guard_vi(campos, mensaje)
-        self._17_th12online(campos, mensaje)
-        self._18_datos_gps(campos, mensaje)
-        self._19_contador(campos, mensaje)
-        self._20_mantenimiento(campos, mensaje)
-        
-        self._21_canbus(campos, mensaje)
-        self._22_canbus_horas(campos, mensaje)
-        self._23_canbus_fuel(campos, mensaje)
-        self._24_canbus_extendido(campos, mensaje)
-        self._25_canbus_fms3(campos, mensaje)
+        self._21_canbus(campos, mensaje)                    # 26
+        self._22_canbus_horas(campos, mensaje)              # 27
+        self._23_canbus_fuel(campos, mensaje)               # 28
+        self._24_canbus_extendido(campos, mensaje)          # 29
+        self._25_canbus_fms3(campos, mensaje)               # 30
 
-        self._26_glp_iveco_euro5(campos, mensaje)
-        self._27_knorr(campos, mensaje)
-        self._28_haldex(campos, mensaje)
-        self._29_wabco(campos, mensaje)
-        self._30_7080(campos, mensaje)
+        self._26_glp_iveco_euro5(campos, mensaje)           # 31
+        self._27_knorr(campos, mensaje)                     # 32
+        self._28_haldex(campos, mensaje)                    # 33
+        self._29_wabco(campos, mensaje)                     # 34
+        self._30_7080(campos, mensaje)                      # 35
 
-        self._31_informacion_gsm(campos, mensaje)
-        self._32_id_movil_slave(campos, mensaje)
-        self._33_master(campos, mensaje)
-        self._34_trailer_7080(campos, mensaje)
-        self._35_ibutton(campos, mensaje)
+        self._31_informacion_gsm(campos, mensaje)           # 36
+        self._32_id_movil_slave(campos, mensaje)            # 37
+        self._33_master(campos, mensaje)                    # 38
+        self._34_trailer_7080(campos, mensaje)              # 39
+        self._35_ibutton(campos, mensaje)                   # 40
 
-        self._36_palfinger(campos, mensaje)
-        self._37_ns_carrier(campos, mensaje)
-        self._38_conductor(campos, mensaje)
-        self._39_doble_conductor(campos, mensaje)
-        self._40_alarma_puerta_slave(campos, mensaje)
+        self._36_palfinger(campos, mensaje)                 # 41
+        self._37_ns_carrier(campos, mensaje)                # 42
+        self._38_conductor(campos, mensaje)                 # 43
+        self._39_doble_conductor(campos, mensaje)           # 44
+        self._40_alarma_puerta_slave(campos, mensaje)       # 45
 
-        self._41_lls20160(campos, mensaje)
-        self._42_salidas_digitales(campos, mensaje)
-        self._43_bloque_almacenamiento(campos, mensaje)
-        self._44_power_supply(campos, mensaje)
-        self._45_intelliset(campos, mensaje)
+        self._41_lls20160(campos, mensaje)                  # 46
+        self._42_salidas_digitales(campos, mensaje)         # 47
+        self._43_bloque_almacenamiento(campos, mensaje)     # 48
+        self._44_power_supply(campos, mensaje)              # 49
+        self._45_intelliset(campos, mensaje)                # 50
         
         self._99_finales(campos, mensaje)
         

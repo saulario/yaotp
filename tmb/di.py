@@ -166,7 +166,7 @@ def remolque_TH21(v):
 def obtener_di_th15(v, esquema):
     
     if esquema is None:
-        log.info("<----- Salida, no hay esquema")
+        log.debug("<----- Salida, no hay esquema")
         return None                 
     
     if esquema.startswith("Portatil_Simple"):
@@ -257,15 +257,15 @@ def obtener_di_th16(v):
     return di
 
 def obtener_entradas_digitales(v, esquema, th16):
-    log.info("-----> Inicio")
-    log.info("\t(v) . . .: %s" % v)
-    log.info("\t(esquema): %s" % esquema)
-    log.info("\t(th16)  .: %s" % th16)
+    log.debug("-----> Inicio")
+    log.debug("\t(v) . . .: %s" % v)
+    log.debug("\t(esquema): %s" % esquema)
+    log.debug("\t(th16)  .: %s" % th16)
     
     if th16:
         di = obtener_di_th16(v)
     else:
         di = obtener_di_th15(v, esquema)
    
-    log.info("<----- Fin")
+    log.debug("<----- Fin")
     return di   
