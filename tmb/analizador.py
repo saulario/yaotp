@@ -19,7 +19,7 @@ import logging
 from an_bat import ParserBATGETINFO
 from an_das import ParserGETDAS
 from an_drvinfo import ParserGETDRIVERINFO
-from an_fmsstat import ParserFMSSTATGET
+from an_fmsstat import ParserFMSSTATSGET
 from an_p import ParserP
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def parser_factory(context, texto):
     campos = texto.split(",")
     
     if len(campos) < 3:
-        log.warn("<----- Mensaje aparentemente incorrecto, saliendo...")
+        log.warn("<----- Mensaje aparentemente incorrecto, saliendo... %s" % (texto))
         return parser
     
     id_dev = int(campos[1])
@@ -62,7 +62,7 @@ def parser_factory(context, texto):
     dispositivo = context.get_dispositivos()[id_dev]
     tipo = campos[2]
     
-    if tipo.startswith("TDI*P"):
+    if tipo.startswith("TDI*P="):
         parser = ParserP(context, dispositivo)
     elif tipo.startswith("TDI*BATGETINFO"):
         parser = ParserBATGETINFO(context, dispositivo)            
@@ -71,7 +71,7 @@ def parser_factory(context, texto):
     elif tipo.startswith("TDI*GETDRIVER"):
         parser = ParserGETDRIVERINFO(context, dispositivo)
     elif tipo.startswith("TDI*FMSSTATSGET"):
-        parser = ParserFMSSTATGET(context, dispositivo)
+        parser = ParserFMSSTATSGET(context, dispositivo)
         
     log.debug("<----- Fin")
     return parser

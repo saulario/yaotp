@@ -21,6 +21,7 @@ import canbus
 import di
 import ebs
 import gis
+import safe
 import tacografo as taco
 
 log = logging.getLogger(__name__)
@@ -131,19 +132,22 @@ class ParserP(object):
     def _02_fecha_hora(self, campos, mensaje):
         if not self._mascara & self.FECHA_HORA:
             return
+        log.debug("+")
         aux = ("%s %s" % (campos.pop(0), campos.pop(0)))
-        mensaje["fecha"] = datetime.datetime.strptime(aux, "%d/%m/%Y %H:%M:%S")
+        mensaje["fecha"] = safe.to_datetime(aux, "%d/%m/%Y %H:%M:%S")
         
     def _03_fecha_hora1(self, campos, mensaje):
         if not self._mascara & self.FECHA_HORA_1:
             return
+        log.debug("+")            
         aux = ("%s %s" % (campos.pop(0), campos.pop(0)))
         d = self._get_datos_gps(mensaje)
-        d["fecha"] = datetime.datetime.strptime(aux, "%d/%m/%Y %H:%M:%S")
+        d["fecha"] = safe.to_datetime(aux, "%d/%m/%Y %H:%M:%S")
 
     def _04_datos_gps(self, campos, mensaje):
         if not self._mascara & self.DATOS_GPS:
             return
+        log.debug("+")
         d = self._get_datos_gps(mensaje)
         d["posicion"] = gis.convertir_coordenada_GPS(campos.pop(0), 
                  campos.pop(0))
@@ -154,7 +158,8 @@ class ParserP(object):
 
     def _05_pt100_internas(self, campos, mensaje):
         if not self._mascara & self.PT100_INTERNAS:
-            return       
+            return    
+        log.debug("+")   
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.PT100_INTERNAS))
         i = int(self._mascara & self.TH16)
@@ -166,6 +171,7 @@ class ParserP(object):
     def _06_pt100_externas(self, campos, mensaje):
         if not self._mascara & self.PT100_EXTERNAS:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.PT100_EXTERNAS))
         sondas = list(float(campos.pop(0)) for i in range(3))
@@ -176,12 +182,14 @@ class ParserP(object):
     def _07_entradas_analogicas(self, campos, mensaje):
         if not self._mascara & self.ENTRADAS_ANALOGICAS:
             return
+        log.debug("+")
         mensaje["analogicInput"] = list(float(campos.pop(0)) 
                 for i in range(int(campos.pop(0))))
 
     def _08_apache(self, campos, mensaje):
         if not self._mascara & self.APACHE:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)    
         d["dispositivos"].append(self._get_bit(self.APACHE))
         d["sondas"] = list(float(campos.pop(0)) for i in range(2))
@@ -189,6 +197,7 @@ class ParserP(object):
     def _09_transcan(self, campos, mensaje):
         if not self._mascara & self.TRANSCAN:
             return        
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)    
         d["dispositivos"].append(self._get_bit(self.TRANSCAN))
         sondas = list(float(campos.pop(0)) for i in range(int(self._dispositivo["TRASCANCHANNELS"])))
@@ -199,6 +208,7 @@ class ParserP(object):
     def _10_transcan_advance(self, campos, mensaje):
         if not self._mascara & self.TRANSCAN_ADVANCE:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)    
         d["dispositivos"].append(self._get_bit(self.TRANSCAN_ADVANCE))
         d["sondas"] = list(float(campos.pop(0)) for i in range(8))
@@ -211,6 +221,7 @@ class ParserP(object):
     def _11_euroscan(self, campos, mensaje):
         if not self._mascara & self.EUROSCAN:
             return        
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.EUROSCAN))
         sondas = list(float(campos.pop(0)) for i in range(5))
@@ -220,7 +231,8 @@ class ParserP(object):
                 
     def _12_datacold(self, campos, mensaje):
         if not self._mascara & self.DATACOLD:
-            return        
+            return    
+        log.debug("+")    
         d = self._get_datos_temperatura(mensaje)        
         d["dispositivos"].append(self._get_bit(self.DATACOLD))
         sondas = list(float(campos.pop(0)) for i in range(4))
@@ -234,15 +246,19 @@ class ParserP(object):
         d["DATACOLD"] = d1
         
     def _fromTouchprintToCelsius(self, t):
-        self._temp = float(t) / 10
-        self._temp = round(((self._temp -32) / 1.8), 1)
-        if self._temp < -1000:
-            self._temp = None
-        return self._temp
+        temp = float(t)
+        if temp is None:
+            return None
+        temp = temp / 10
+        temp = round(((temp -32) / 1.8), 1)
+        if temp < -1000:
+            temp = None
+        return temp
 
     def _13_touchprint(self, campos, mensaje):
         if not self._mascara & self.TOUCHPRINT:
-            return        
+            return    
+        log.debug("+")    
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.TOUCHPRINT))
         sondas = list(self._fromTouchprintToCelsius(campos.pop(0)) 
@@ -254,11 +270,13 @@ class ParserP(object):
     def _14_digitales(self, campos, mensaje):
         if not self._mascara & self.ENTRADAS_DIGITALES_EXTENDIDAS:
             return   
+        log.debug("+")
         mensaje["entradasDigitalesExt"] = list(campos.pop(0) for i in range(2))
              
     def _15_ibox(self, campos, mensaje):
         if not self._mascara & self.IBOX:
-            return        
+            return    
+        log.debug("+")    
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.IBOX))        
         d1 = {}
@@ -275,6 +293,7 @@ class ParserP(object):
     def _16_hwasung_termo(self, campos, mensaje):
         if not self._mascara & self.HWASUNG_THERMO:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.HWASUNG_THERMO))        
         d1 = {}                 
@@ -294,17 +313,15 @@ class ParserP(object):
              
     def _17_carrier(self, campos, mensaje):
         if not self._mascara & self.CARRIER:
-            return        
+            return    
+        log.debug("+")    
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.CARRIER))
         d1 = {}
-        d["setPoint"] = float(campos.pop(0)) / 10
+        d["setPoint"] = safe.divide(safe.to_float(campos.pop(0)), 10)
         d1["modoOperacion"] = list(campos.pop(0) for i in range(2))
         d["tempRetorno"] = float(campos.pop(0)) / 10
-        try:
-            d["tempSuministro"] = float(campos.pop(0)) / 10
-        except ValueError:
-            d["tempSuministro"] = float("nan")
+        d["tempSuministro"] = safe.divide(safe.to_float(campos.pop(0)), 10)
         d1["presion"] = float(campos.pop(0)) / 10
         d1["horasTotales"] = float(campos.pop(0))
         d["CARRIER"] = d1
@@ -312,6 +329,7 @@ class ParserP(object):
     def _18_carrier_3rd_party(self, campos, mensaje):
         if not self._mascara & self.CARRIER_3RD_PARTY:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.CARRIER_3RD_PARTY))
         d1 = {}                 
@@ -340,6 +358,7 @@ class ParserP(object):
     def _19_carrier_partner(self, campos, mensaje):
         if not self._mascara & self.CARRIER_PARTNER:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.CARRIER_PARTNER))
         d["sondas"] = list(campos.pop(0) for i in range(4))
@@ -430,7 +449,8 @@ class ParserP(object):
 
     def _20_das(self, campos, mensaje):
         if not self._mascara & self.DAS:
-            return        
+            return    
+        log.debug("+")    
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.DAS))
         d["setPoint"] = float(campos.pop(0))
@@ -440,6 +460,7 @@ class ParserP(object):
     def _21_thermo_guard_vi(self, campos, mensaje):
         if not self._mascara & self.THERMO_GUARD_VI:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.THERMO_GUARD_VI))
         d["setPoint"] = self._fromTouchprintToCelsius(float(campos.pop(0)))
@@ -450,6 +471,7 @@ class ParserP(object):
     def _22_th12online(self, campos, mensaje):
         if not self._mascara & self.TH12_ONLINE:
             return    
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.TH12_ONLINE))
         t = float(campos.pop(0))  
@@ -459,6 +481,7 @@ class ParserP(object):
     def _23_datos_gps(self, campos, mensaje):
         if not self._mascara & self.DATOS_GPS:
             return
+        log.debug("+")
         d = self._get_datos_gps(mensaje)
         d["kilometros"] = round(float(campos.pop(0)))
         d["entradasDigitales"] = campos.pop(0)
@@ -471,6 +494,7 @@ class ParserP(object):
     def _24_contador(self, campos, mensaje):
         if not self._mascara & self.CONTADOR:
             return    
+        log.debug("+")
         mensaje["kilometros"] = float(campos.pop(0))        
 
     def _25_mantenimiento(self, campos, mensaje):
@@ -483,6 +507,7 @@ class ParserP(object):
     def _26_canbus(self, campos, mensaje):
         if not self._mascara & self.CANBUS:
             return    
+        log.debug("+")
         d = self._get_datos_canbus(mensaje)
         d["tacografo"] = campos.pop(0)
         v = taco.obtener_datos_tacografo(d["tacografo"])
@@ -502,6 +527,7 @@ class ParserP(object):
     def _27_canbus_horas(self, campos, mensaje):
         if not self._mascara & self.CANBUS_HORAS:
             return    
+        log.debug("+")
         d = self._get_datos_canbus(mensaje)
         v = canbus.obtener_horas(campos.pop(0))
         if not v is None:
@@ -510,6 +536,7 @@ class ParserP(object):
     def _28_canbus_fuel(self, campos, mensaje):
         if not self._mascara & self.CANBUS_FUEL:
             return    
+        log.debug("+")
         d = self._get_datos_canbus(mensaje)
         v = canbus.obtener_combustible(campos.pop(0))
         if not v is None:
@@ -518,6 +545,7 @@ class ParserP(object):
     def _29_canbus_extendido(self, campos, mensaje):
         if not self._mascara & self.CANBUS_EXTENDIDO:
             return    
+        log.debug("+")
         d = self._get_datos_canbus(mensaje)
         d["ccvs"] = campos.pop(0)
         v = canbus.obtener_velocidad(d["ccvs"])
@@ -532,6 +560,7 @@ class ParserP(object):
     def _30_canbus_fms3(self, campos, mensaje):
         if not self._mascara & self.CANBUS_FMS3:
             return    
+        log.debug("+")
         d = self._get_datos_canbus(mensaje)
         d["lfe"] = campos.pop(0)
         d["erc1"] = campos.pop(0)
@@ -543,6 +572,7 @@ class ParserP(object):
     def _31_glp_iveco_euro5(self, campos, mensaje):
         if not self._mascara & self.GLP_IVECO_EURO5:
             return
+        log.debug("+")
         d = {}
         d["mp3msg1"] = campos.pop(0)
         d["mp3msg2"] = campos.pop(0)
@@ -551,6 +581,7 @@ class ParserP(object):
     def _32_knorr(self, campos, mensaje):
         if not self._mascara & self.KNORR:
             return
+        log.debug("+")
         d = {}
         d["hrvd"] = campos.pop(0)
         d["speed"] = campos.pop(0)
@@ -568,6 +599,7 @@ class ParserP(object):
     def _33_haldex(self, campos, mensaje):
         if not self._mascara & self.HALDEX:
             return
+        log.debug("+")
         d = {}
         d["speed"] = campos.pop(0)
         d["pressures"] = campos.pop(0)
@@ -578,6 +610,7 @@ class ParserP(object):
     def _34_wabco(self, campos, mensaje):
         if not self._mascara & self.WABCO:
             return
+        log.debug("+")
         d = {}
         d["ebs11"] = campos.pop(0)
         d["ebs12"] = campos.pop(0)
@@ -596,6 +629,7 @@ class ParserP(object):
     def _35_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080:
             return
+        log.debug("+")
         d = self._get_datos_7080(mensaje)    
         d["kilometros"] = float(campos.pop(0))
         d["velocidad"] = float(campos.pop(0))
@@ -604,6 +638,7 @@ class ParserP(object):
     def _36_informacion_gsm(self, campos, mensaje):
         if not self._mascara & self.INFORMACION_GSM:
             return
+        log.debug("+")
         d = {}    
         if self._mascara & self.SOCKET:
             d["operador"] = campos.pop(0)       # revisar
@@ -616,27 +651,32 @@ class ParserP(object):
     def _38_master(self, campos, mensaje):
         if not self._mascara & self.MASTER:
             return
-        raise RuntimeError("33_master no implementado")
+        log.debug("+")
+        raise RuntimeError("38_master no implementado")
                     
     def _39_trailer_7080(self, campos, mensaje):
         if not self._mascara & self.DL_7080_TRAILER:
-            return            
+            return    
+        log.debug("+")        
         d = self._get_datos_7080(mensaje)
         d["idEsclavo"] = campos.pop(0)
         
     def _40_ibutton(self, campos, mensaje):
         if not self._mascara & self.IBUTTON:
-            return            
+            return    
+        log.debug("+")        
         mensaje["IBUTTON"] = campos.pop(0)
         
     def _41_palfinger(self, campos, mensaje):
         if not self._mascara & self.PALFINGER:
             return
+        log.debug("+")
         mensaje["PALFINGER"] = campos.pop(0)
                     
     def _42_ns_carrier(self, campos, mensaje):
         if not self._mascara & self.NS_CARRIER:
             return
+        log.debug("+")
         d = self._get_datos_temperatura(mensaje)
         if not "CARRIER" in d:
             d["CARRIER"] = {}        
@@ -646,12 +686,14 @@ class ParserP(object):
     def _43_conductor(self, campos, mensaje):
         if not self._mascara & self.CONDUCTOR:
             return
+        log.debug("+")
         d = self._get_datos_conductores(mensaje)
         d["id1"] = campos.pop(0)
                     
     def _44_doble_conductor(self, campos, mensaje):
         if not self._mascara & self.DOBLE_CONDUCTOR:
             return
+        log.debug("+")
         d = self._get_datos_conductores(mensaje)
         d["id1"] = campos.pop(0)        
         d["id2"] = campos.pop(0)
@@ -659,11 +701,13 @@ class ParserP(object):
     def _45_alarma_puerta_slave(self, campos, mensaje):
         if not self._mascara & self.ALARMA_PUERTA_SLAVE:
             return
+        log.debug("+")
         mensaje["alarmaPuertaSlave"] = campos.pop(0)
 
     def _46_lls20160(self, campos, mensaje):
         if not self._mascara & self.LLS20160:
             return
+        log.debug("+")
         d = {}
         d["tempSonda1"] = float(campos.pop(0))
         d["tempSonda2"] = float(campos.pop(0))
@@ -674,24 +718,28 @@ class ParserP(object):
     def _47_salidas_digitales(self, campos, mensaje):
         if not self._mascara & self.SALIDAS_DIGITALES:
             return
+        log.debug("+")
         mensaje["salidasDigitales"] = campos.pop(0)
                     
     def _48_bloque_almacenamiento(self, campos, mensaje):
         if not self._mascara & self.BLOQUE_ALMACENAMIENTO:
             return
+        log.debug("+")
         mensaje["salidasDigitales"] = campos.pop(0)
                     
     def _49_power_supply(self, campos, mensaje):
         if not self._mascara & self.POWER_SUPPLY:
             return
+        log.debug("+")
         try:
             mensaje["alimentacion"] = float(campos.pop(0))
         except ValueError:
             mensaje["alimentacion"] = float("nan")
                     
-    def _45_intelliset(self, campos, mensaje):
+    def _50_intelliset(self, campos, mensaje):
         if not self._mascara & self.INTELLISET:
-            return            
+            return    
+        log.debug("+")        
         d = {}
         d["installed"] = campos.pop(0)
         d["loadedNumber"] = campos.pop(0)
@@ -701,10 +749,12 @@ class ParserP(object):
         mensaje["INTELLISET"] = d
         
     def _99_finales(self, campos, mensaje):        
+        log.debug("+")
         mensaje["segmento"] = campos.pop(0)
         mensaje["offset"] = campos.pop(0)
 
     def parse(self, texto):
+        log.debug("\t%s" % texto)
         campos = texto.split(",")
         mensaje = {}
         mensaje["idDispositivo"] = self._dispositivo["ID_MOVIL"]
@@ -779,7 +829,7 @@ class ParserP(object):
         self._47_salidas_digitales(campos, mensaje)         # 47
         self._48_bloque_almacenamiento(campos, mensaje)     # 48
         self._49_power_supply(campos, mensaje)              # 49
-        self._45_intelliset(campos, mensaje)                # 50
+        self._50_intelliset(campos, mensaje)                # 50
         
         self._99_finales(campos, mensaje)
         

@@ -30,20 +30,23 @@ log = logging.getLogger(__name__)
 def procesar(context):
     while True:
         procesarImpl(context)
-        time.sleep(1)
+        time.sleep(5)
 
 def procesarImpl(context):
+
+    t1 = datetime.datetime.now()
     res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
                        % (context.url, context.queue, context.batch_size), 
              auth=(context.user, context.password))              
-    mensajes = res.text.splitlines()
-
-    t1 = datetime.datetime.now()
-    for texto in mensajes:
-        procesar_mensaje(context, texto)
     t1 = datetime.datetime.now() - t1
 
-    log.info("\tProcesados %s mensajes en %s segundos" % (len(mensajes), t1))
+    t2 = datetime.datetime.now()
+    mensajes = res.text.splitlines()
+    for texto in mensajes:
+        procesar_mensaje(context, texto)
+    t2 = datetime.datetime.now() - t2
+
+    log.info("\tProcesados %s mensajes en %s segundos con una espera de red de %s" % (len(mensajes), t2, t1))
     
 #
 #
