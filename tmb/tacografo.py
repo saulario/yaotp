@@ -176,15 +176,15 @@ def obtener_sentido(texto):
 #(Left$(ConvBinario(Mid$(tacografo, 7, 1)), 2))
 
 def obtener_datos_tacografo(texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s" % texto)
+    log.debug("-----> Inicio")
+    log.debug("\t(texto): %s" % texto)
     
     if texto is None or len(texto) < 16:
-        log.info("<----- Salida, no hay datos")
+        log.debug("<----- Salida, no hay datos")
         return None
     match = tacografo_pattern.match(texto)
     if not match:
-        log.info("<----- Salida, no coincide el patron")
+        log.debug("<----- Salida, no coincide el patron")
         return None    
     
     tacho = {}
@@ -209,5 +209,5 @@ def obtener_datos_tacografo(texto):
     tacho["modo"] = obtener_modo(texto)
     tacho["sentido"] = obtener_sentido(texto)
 
-    log.info("<----- Fin")
+    log.debug("<----- Fin")
     return tacho        

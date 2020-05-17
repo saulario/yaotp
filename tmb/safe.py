@@ -14,21 +14,38 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import logging
-import requests
 
 log = logging.getLogger(__name__)
 
-def procesar(context):
-    """Procesamiento de las notificaciones de los dispositivos asociados a la cola
-    """
-    log.info("-----> Inicio")
-    res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
-                       % (context.url, "Notifications"+ context.queue, context.batch_size), 
-             auth=(context.user, context.password))              
-    mensajes = res.text.splitlines()
-    
-    for texto in mensajes:
-        log.info(texto)
-    
-    log.info("<----- Fin")
+def divide(num, den):
+    try:
+        return num / den
+    except TypeError:
+        log.debug("\tDivisión inválida %s / %s" % (num, den))
+        return None
+
+def to_float(valor, digitos = None):
+    retval = None
+    try:
+        retval = float(valor)
+    except ValueError:
+        log.debug("\tRecibido valor no convertible a float %s" % (valor))
+        return retval
+    if digitos is not None:
+        retval = round(retval, to_int(digitos))
+    return retval
+
+def to_int(valor):
+    try:
+        return int(valor)
+    except ValueError:
+        log.debug("\tRecibido valor no convertible a int %s" % (valor))
+        return None
+
+def to_datetime(valor, formato):
+    try:
+        return datetime.datetime.strptime(valor, formato)
+    except ValueError:
+        return None

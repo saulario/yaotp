@@ -54,13 +54,14 @@ if __name__ == "__main__":
         context.queue = cp.get("TDI", "cola")
         context.user = cp.get("TDI", "user")
         context.password = cp.get("TDI", "password")
+        context.batch_size = cp.get("TDI", "batch_size")
 
         context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
         context.db = context.client.get_database(cp.get("MONGO", "db"))
         context.debug = cp.getint("MONGO", "debug")
 
-        dispositivos.procesar(context)
-        notificaciones.procesar(context)
+        # dispositivos.procesar(context)
+        # notificaciones.procesar(context) 
         mensajes.procesar(context)
 
     except Exception as e:

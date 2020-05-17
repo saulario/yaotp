@@ -15,20 +15,17 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import re
 
 from an_bat import ParserBATGETINFO
 from an_das import ParserGETDAS
 from an_drvinfo import ParserGETDRIVERINFO
-from an_fmsstat import ParserFMSSTATGET
+from an_fmsstat import ParserFMSSTATSGET
 from an_p import ParserP
 
-log = logging.getLogger(__name__)
+json_pattern = re.compile("^GPRS\\/SOCKET,(?P<id>[0-9]+),(?P<json>\\{.+\\})$")
 
-#class Mensaje(object):
-#
-#    def __init__(self, id_movil, registro):
-#        self.id_movil = id_movil
-#        self.registro = registro
+log = logging.getLogger(__name__)
     
 class ParserNULL(object):
     
@@ -44,14 +41,14 @@ class ParserNULL(object):
 
         
 def parser_factory(context, texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s" % texto)
+    log.debug("-----> Inicio")
+    log.debug("\t(texto): %s" % texto)
     
     parser = ParserNULL(context)
     campos = texto.split(",")
     
     if len(campos) < 3:
-        log.warn("<----- Mensaje aparentemente incorrecto, saliendo...")
+        log.warn("<----- Mensaje aparentemente incorrecto, saliendo... %s" % (texto))
         return parser
     
     id_dev = int(campos[1])
@@ -62,7 +59,7 @@ def parser_factory(context, texto):
     dispositivo = context.get_dispositivos()[id_dev]
     tipo = campos[2]
     
-    if tipo.startswith("TDI*P"):
+    if tipo.startswith("TDI*P="):
         parser = ParserP(context, dispositivo)
     elif tipo.startswith("TDI*BATGETINFO"):
         parser = ParserBATGETINFO(context, dispositivo)            
@@ -71,18 +68,18 @@ def parser_factory(context, texto):
     elif tipo.startswith("TDI*GETDRIVER"):
         parser = ParserGETDRIVERINFO(context, dispositivo)
     elif tipo.startswith("TDI*FMSSTATSGET"):
-        parser = ParserFMSSTATGET(context, dispositivo)
+        parser = ParserFMSSTATSGET(context, dispositivo)
         
-    log.info("<----- Fin")
+    log.debug("<----- Fin")
     return parser
 
 def parse(context, texto):
-    log.info("-----> Inicio")
-    log.info("\t(texto): %s" % texto)
+    log.debug("-----> Inicio")
+    log.debug("\t(texto): %s" % texto)
     
-    mensaje = parser_factory(context, texto).parse(texto);
+    mensaje = parser_factory(context, texto).parse(texto)
         
-    log.info("<----- Fin")        
+    log.debug("<----- Fin")        
     return mensaje
 
 #if __name__ == "__main__":

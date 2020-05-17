@@ -14,21 +14,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
-import requests
-
-log = logging.getLogger(__name__)
-
-def procesar(context):
-    """Procesamiento de las notificaciones de los dispositivos asociados a la cola
-    """
-    log.info("-----> Inicio")
-    res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
-                       % (context.url, "Notifications"+ context.queue, context.batch_size), 
-             auth=(context.user, context.password))              
-    mensajes = res.text.splitlines()
+class ParserJSON(object):
     
-    for texto in mensajes:
-        log.info(texto)
-    
-    log.info("<----- Fin")
+    def __init__(self, context, dispositivo):
+        self._context = context
+        self._dispositivo = dispositivo
+
+    def parse(self, texto):
+        pass

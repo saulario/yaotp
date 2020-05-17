@@ -29,7 +29,7 @@ def obtener_temp_motor(v):
     return res
     
 def obtener_temp_fuel(v):
-    if v is None or v == "f":
+    if v is None or v in "fc":
         return None
     res = int(v[2:4], base=16) - 40
     return res
@@ -56,7 +56,7 @@ def obtener_combustible(v):
     return obtener_valor_can(v, 0.5)
 
 def obtener_velocidad(v):
-    if v is None or v == "f":
+    if v is None or v in "cf":
         return None
     v1 = int(v[2:4], base=16)
     v2 = int(v[4:6], base=16)
