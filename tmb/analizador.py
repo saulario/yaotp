@@ -15,6 +15,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import re
 
 from an_bat import ParserBATGETINFO
 from an_das import ParserGETDAS
@@ -22,13 +23,9 @@ from an_drvinfo import ParserGETDRIVERINFO
 from an_fmsstat import ParserFMSSTATSGET
 from an_p import ParserP
 
-log = logging.getLogger(__name__)
+json_pattern = re.compile("^GPRS\\/SOCKET,(?P<id>[0-9]+),(?P<json>\\{.+\\})$")
 
-#class Mensaje(object):
-#
-#    def __init__(self, id_movil, registro):
-#        self.id_movil = id_movil
-#        self.registro = registro
+log = logging.getLogger(__name__)
     
 class ParserNULL(object):
     
