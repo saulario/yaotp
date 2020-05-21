@@ -14,6 +14,8 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
+
 from sqlalchemy import MetaData, Table
 
 class BaseDAL():
@@ -48,13 +50,38 @@ class BaseDAL():
     def select(self):
         return self._t.select()
 
-    def update(self):
-        return self._t.update()
+    def get_table(self):
+        return self._t
 
-    def delete(self):
-        return self._t.delete()
 
-    
+class FMSStatsDAL(BaseDAL):
+
+    def __init__(self, metadata):
+        super().__init__(metadata, "FMSStats")
+
+    def delete(self, conn, pk):
+        t = self._t
+        stmt = t.delete().where(t.c.IdMovil == pk)
+        conn.execute(stmt)
+
+    def read(self, conn, pk):
+        t = self._t
+        stmt = t.select().where(t.c.IdMovil == pk)
+        return self.execute_read(conn, stmt)
+
+    def update(self, conn, pk, **kwargs):
+        t = self._t
+        stmt = t.update().values(kwargs).where(t.c.IdMovil == pk)
+        conn.execute(stmt) 
+
+    def get_instance(self, mensaje):
+        retval = {}
+        retval["idMovil"] = mensaje["idDispositivo"]
+        retval["indice"] = mensaje["indice"] 
+
+        return retval
+
+
 class MovilDAL(BaseDAL):
 
     def __init__(self, metadata):
@@ -70,6 +97,11 @@ class MovilDAL(BaseDAL):
         stmt = t.select().where(t.c.IdMovil == pk)
         return self.execute_read(conn, stmt)
 
+    def update(self, conn, pk, **kwargs):
+        t = self._t
+        stmt = t.update().values(kwargs).where(t.c.IdMovil == pk)
+        conn.execute(stmt)        
+
 class PosicionesDAL(BaseDAL):
 
     def __init__(self, metadata):
@@ -84,3 +116,41 @@ class PosicionesDAL(BaseDAL):
         t = self._t
         stmt = t.select().where(t.c.idMovil == pk)
         return self.execute_read(conn, stmt)
+
+    def _get_instance_CANBUS(self, retval, mensaje):
+        if "CANBUS" not in mensaje:
+            return
+
+    def _get_instance_DI(self, retval, mensaje):
+        if "DI" not in mensaje:
+            return
+
+    def _get_instance_GPS(self, retval, mensaje):
+        if "GPS" not in mensaje:
+            return
+        retval["latitud"] = mensaje["GPS"]["posicion"]["coordinates"][0]
+        retval["Longitud"] = mensaje["GPS"]["posicion"]["coordinates"][1]
+        retval["Altitud"] = mensaje["GPS"]["altitud"]
+        retval["NumeroSatelites"] = mensaje["GPS"]["satelites"]        
+        retval["Velocidad"] = mensaje["GPS"]["velocidad"]
+        retval["Direccion"] = mensaje["GPS"]["rumbo"]
+        retval["FechaHoraGPS"] = mensaje["GPS"]["fecha"]
+        retval["Kilometros"] = mensaje["GPS"]["kilometros"]
+    
+    def _get_instance_GSM(self, retval, mensaje):
+        if "GSM" not in mensaje:
+            return
+        retval["CalidadGSM"] = mensaje["GSM"]["calidadSenal"]
+
+    def get_instance(self, mensaje):
+        retval = {}
+        retval["FechaHora"] = mensaje["fecha"]
+        retval["idmovil"] = mensaje["idDispositivo"]
+        retval["FechaHoraGPS"] = mensaje["fecha"] # se sobreescribe si viene información GPS
+
+        self._get_instance_CANBUS(retval, mensaje)
+        self._get_instance_DI(retval, mensaje)
+        self._get_instance_GPS(retval, mensaje)
+        self._get_instance_GSM(retval, mensaje)
+
+        return retval

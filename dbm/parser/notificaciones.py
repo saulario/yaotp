@@ -29,6 +29,6 @@ def procesar(context):
     mensajes = res.text.splitlines()
     
     for texto in mensajes:
-        log.info(texto)
+        log.debug(texto)
     
     log.info("<----- Fin")

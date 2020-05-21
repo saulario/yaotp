@@ -163,7 +163,7 @@ class ParserP(object):
         d = self._get_datos_temperatura(mensaje)
         d["dispositivos"].append(self._get_bit(self.PT100_INTERNAS))
         i = int(self._mascara & self.TH16)
-        sondas = list(float(campos.pop(0)) for i in range(3 + i))
+        sondas = list(safe.to_float(campos.pop(0)) for i in range(3 + i))
         for t in sondas:
             if not t is None:
                 d["sondas"].append(t)
@@ -642,7 +642,7 @@ class ParserP(object):
         d = {}    
         if self._mascara & self.SOCKET:
             d["operador"] = campos.pop(0)       # revisar
-        d["calidadSenal"] = campos.pop(0)
+        d["calidadSenal"] = safe.to_int(campos.pop(0))
         mensaje["GSM"] = d
                 
     def _37_id_movil_slave(self, campos, mensaje):

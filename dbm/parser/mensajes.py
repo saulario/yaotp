@@ -19,20 +19,22 @@ import logging
 import requests
 import time
 
+from sqlalchemy.exc import IntegrityError
+
 import parser.analizador as analizador
 
-log = logging.getLogger(__name__)
+from bl.schema import *
 
-#
-#
-#
+log = logging.getLogger(__name__)
 
 def procesar(context):
     while True:
         procesarImpl(context)
-        time.sleep(5)
+        time.sleep(1)
 
 def procesarImpl(context):
+
+    conn = context.sql_engine.connect()
 
     t1 = datetime.datetime.now()
     res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
@@ -43,25 +45,45 @@ def procesarImpl(context):
     t2 = datetime.datetime.now()
     mensajes = res.text.splitlines()
     for texto in mensajes:
-        procesar_mensaje(context, texto)
+        procesar_mensaje(context, conn, texto)
     t2 = datetime.datetime.now() - t2
 
-    log.info("\tProcesados %s mensajes en %s segundos con una espera de red de %s" % (len(mensajes), t2, t1))
+    log.info("\tProcesados %s mensajes en %s segundos"  % (len(mensajes), t2))
+
+    conn.close()
     
-#
-#
-#
 def enviar_mq(context, idMensaje):    
     pass
-#
-#
-#    
-def procesar_mensaje(context, texto):
+
+def dal_factory(context, mensaje):
+    retval = None
+    if "TDI*P" == mensaje["tipoMensaje"]:
+        retval = PosicionesDAL(context.sql_metadata)
+    return retval
+
+def duplicado(context, mensaje):
+    pass
+
+def procesar_mensaje(context, conn, texto):
     try:
         mensaje = analizador.parse(context, texto)
-        if not mensaje is None:
+        if mensaje is not None:
+            # mongo
             insertedId = context.db.mensajes.insert_one(mensaje).inserted_id
             enviar_mq(context, insertedId)
+            # sql
+            dal = dal_factory(context, mensaje)
+            if dal is not None:
+                row = dal.get_instance(mensaje)
+                try:
+                    dal.insert(conn, **row)
+                except IntegrityError as e:
+                    # log.warn("\tIgnorando %s %s" % (row["idmovil"], row["FechaHoraGPS"]))
+                    pass
+                except Exception as e:
+                    log.error(e)
+                    log.error(row)
+                
     except Exception as e:
         log.error(e)
-        log.error("*** ignorando mensaje %s" % texto)
+        log.error("\t*** ignorando mensaje %s" % texto)

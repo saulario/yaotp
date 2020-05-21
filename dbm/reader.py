@@ -63,13 +63,13 @@ if __name__ == "__main__":
         context.db = context.client.get_database(cp.get("MONGO", "db"))
         context.debug = cp.getint("MONGO", "debug")
 
-        context.sql_engine = sqlalchemy.create_engine("mssql+pymssql://sa:mssql!123@localhost/auroravacia",
-                pool_pre_ping = True, pool_recycle = 3600)
+        context.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
+                pool_pre_ping = True, pool_recycle = int(cp.get("SQL", "recycle")))
         context.sql_metadata = sqlalchemy.MetaData(bind = context.sql_engine)
 
         dispositivos.procesar(context)
-        # notificaciones.procesar(context) 
-        # mensajes.procesar(context)
+        notificaciones.procesar(context) 
+        mensajes.procesar(context)
 
     except Exception as e:
         log.error(e)

@@ -29,7 +29,7 @@ def procesar(context):
     dispositivos = res.json()
     
     dispositivosCol = context.db.get_collection("dispositivos")
-    #dispositivosCol.delete_many({})    
+    dispositivosCol.delete_many({})    
 
     conn = context.sql_engine.connect()
     movilDAL = MovilDAL(context.sql_metadata)
@@ -47,18 +47,27 @@ def procesar(context):
             dispositivo["maskextBin"] = int(dispositivo["MASKEXT"][::-1], 
                        base=2)
 
-            #dispositivosCol.insert_one(dispositivo)
+            dispositivosCol.insert_one(dispositivo)
             id = dispositivo["ID_MOVIL"]
+            movil = None
             if not id in moviles:
-                nuevo = {}
-                nuevo["IdMovil"] = dispositivo["ID_MOVIL"]
-                nuevo["Matricula"] = dispositivo["REGISTRATION"]
-                nuevo["Nombre"] = dispositivo["CLIENT"]
-                nuevo["Mascara"] = dispositivo["MASK"]
-                nuevo["MascaraExtra"] = dispositivo["MASKEXT"]
-                nuevo["Mail"] = dispositivo["EMAIL"]
-                nuevo["IdTfno"] = dispositivo["TELEPHONE"]
-                movilDAL.insert(conn, nuevo)
+                movil = {}
+                movil["IdMovil"] = dispositivo["ID_MOVIL"]
+            else:
+                movil = moviles[id]
+                
+            movil["Matricula"] = dispositivo["REGISTRATION"]
+            movil["Nombre"] = dispositivo["CLIENT"]
+            movil["Mascara"] = dispositivo["MASK"]
+            movil["MascaraExtra"] = dispositivo["MASKEXT"]
+            movil["Mail"] = dispositivo["EMAIL"]
+            movil["IdTfno"] = dispositivo["TELEPHONE"]
+
+            if not id in moviles:
+                movilDAL.insert(conn, **movil)
+            else:
+                # movilDAL.update(conn, id, **movil)
+                pass
 
     conn.close()
             

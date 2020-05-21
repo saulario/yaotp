@@ -176,6 +176,10 @@ class ParserFMSSTATSGET(object):
 
         # mensaje["raw"] = texto
 
+        # de momento obviamos los FINAL
+        if "FINAL" in campos:
+            return None
+
         if self._context.debug == mensaje["idDispositivo"]:
             mensaje["dbgMascara"] = self._dispositivo["maskBin"]
             mensaje["dbgMensaje"] = texto        
@@ -183,7 +187,7 @@ class ParserFMSSTATSGET(object):
         self._eliminar_campos(campos)
         
         aux = campos.pop(0).split("=")
-        mensaje["indice"] = safe.to_int(aux[1])
+        mensaje["indice"] = aux[1]
 
         if "FINAL" not in campos:
             self._parse_completo(mensaje, campos)
