@@ -17,7 +17,9 @@
 import datetime
 import logging
 import requests
+import sys
 import time
+import traceback
 
 from sqlalchemy.exc import IntegrityError
 
@@ -87,3 +89,4 @@ def procesar_mensaje(context, conn, texto):
     except Exception as e:
         log.error(e)
         log.error("\t*** ignorando mensaje %s" % texto)
+        log.error(traceback.format_tb(sys.exc_info()[2]))
