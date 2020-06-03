@@ -14,7 +14,7 @@ from proton.utils import BlockingConnection, BlockingSender
 
 
 URL = "localhost:5672"
-ADDRESS = "topic://tests"
+ADDRESS = "tests"
 USERNAME = "guest"
 PASSWORD = "guest"
 
@@ -31,44 +31,43 @@ class MyMessageHandler(MessagingHandler):
         self.username = username
         self.password = password
         self.name = name
+        self.expected = prefetch
+        self.received = 0
 
     def on_start(self, event):
         conn = event.container.connect(self.server, user = self.username, 
                 password = self.password,
                 heartbeat = 60)
-        event.container.create_receiver(conn, self.address, name = self.name, 
+        receiver = event.container.create_receiver(conn, self.address, name = self.name,
                 options = DurableSubscription())
         pass
 
     def on_message(self, event):
-        print(event.message)
-        if "5" in event.message.body:
-            self.reject(event.delivery) 
-        else:
-            self.accept(event.delivery)
+        if self.expected == 0 or self.received < self.expected:
+            self.received += 1
+            print("(%d) %s - %d" % (self.received, event.message, event.message.delivery_count))
+            if event.message.delivery_count > 10:
+                self.reject(event.delivery) 
+            #elif "995" in event.message.body:
+            #    self.release(event.delivery, True) 
+            else:
+                self.accept(event.delivery)
+            if self.received >= self.expected:
+                event.receiver.detach()
+                event.connection.close()
 
     def in_connection_error(self, event):
         raise ConnectionException()
 
 if __name__ == "__main__":
 
-    con = BlockingConnection(url = URL, address = ADDRESS, 
-            user = USERNAME, password = PASSWORD)
-    sender = BlockingSender(con, con.create_sender(ADDRESS))
-    #for i in range(5):
-    #   sender.send(Message(("esto es el cuerpo del mensaje %s" % i), id = uuid.uuid4()))
-    sender.close()
-    con.close()
-
-    container = Container(MyMessageHandler(URL, ADDRESS, USERNAME, PASSWORD,
-            SUBSCRIPTION_NAME))
-    container.container_id = CONTAINER_ID
-
     try:
-        container.run()
+        while True:
+            container = Container(MyMessageHandler(URL, ADDRESS, USERNAME, PASSWORD,
+                    SUBSCRIPTION_NAME))
+            container.container_id = CONTAINER_ID
+            container.run()
+            pass 
     except Exception as e:
         print(e)
 
-
-
-    con.close()
