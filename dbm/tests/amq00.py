@@ -27,7 +27,7 @@ if __name__ == "__main__":
             user = USERNAME, password = PASSWORD)
     sender = BlockingSender(con, con.create_sender(ADDRESS))
     for i in range(1000):
-       sender.send(Message(("esto es el cuerpo del mensaje %s" % i), id = uuid.uuid4()))
+       sender.send(Message(("esto es el cuerpo del mensaje %s" % i), id = str(uuid.uuid4())))
     sender.close()
     con.close()
 
