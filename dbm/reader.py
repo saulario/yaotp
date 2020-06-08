@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
 import configparser
+import datetime
 import logging
 import optparse
 import os
 import os.path
 import pymongo
+import requests
 import sys
 import threading
 import time
@@ -23,8 +25,32 @@ class LectorColas(threading.Thread):
         super().__init__()
         self.worker = worker
 
+    def _runImpl(self):
+        """
+        Lectura de mensajes de T-Mobility y envío por la exchange t-mobility 
+        """
+
+        t1 = datetime.datetime.now()
+        res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
+                        % (context.url, context.queue, context.batch_size), 
+                auth=(context.user, context.password))              
+        t1 = datetime.datetime.now() - t1
+
+        t2 = datetime.datetime.now()
+        mensajes = res.text.splitlines()
+        for texto in mensajes:
+            pass            
+        t2 = datetime.datetime.now() - t2
+
+        log.info("\tProcesados %s mensajes en %s segundos"  % (len(mensajes), t2))
+
     def run(self):
-        print("LectorColas")
+        """
+        Ejecución del worker
+        """
+        while not self.worker.must_stop:
+            self._runImpl()
+            time.sleep(5)                       # ¿metemos aquí una variable de configuración?
 
 class ProcesarComandos(threading.Thread):
     """
@@ -54,7 +80,7 @@ class Worker():
     """
     def __init__(self, context):
         self.context = context
-
+        self.must_stop = False
 
     def run(self):
         """
