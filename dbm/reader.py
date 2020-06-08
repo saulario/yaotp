@@ -1,82 +1,61 @@
-#
-#    Copyright (C) from 2017 onwards Saul Correas Subias (saul dot correas at gmail dot com)
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#!/usr/bin/python3
 
 import configparser
 import logging
+import optparse
 import os
+import os.path
 import pymongo
 import sys
 
-import sqlalchemy
-
-import parser.dispositivos as dispositivos
-import parser.mensajes as mensajes
-import parser.notificaciones as notificaciones
-
 from context import Context
-from bl import schema
+from environment import *
 
-YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
-YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
-YAOTP_LOG = ("%s/log/%s.log" %
-             (YAOTP_HOME, os.path.basename(__file__).split(".")[0]))
-logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
-                    format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")
 log = logging.getLogger(__name__)
 
-#
-#
-#
+def main(cp):
+    pass
+
+
 if __name__ == "__main__":
-    """
-    Main module
-    """
-    log.info("=====> Inicio (%s)" % os.getpid())
+
+    parser = optparse.OptionParser(usage="usage: %prog [options]")
+    parser.add_option("-c", "--config",  default="DESARROLLO.config",
+                  help="Fichero de configuración de la instancia (%default)")
+    opts, args = parser.parse_args()
+
     retval = 0
+    if opts.config is None:
+        sys.stderr.write("Salida: no se ha especificado fichero de configuración\n")
+        sys.exit(0)
 
     try:
         cp = configparser.ConfigParser()
-        cp.read(YAOTP_CONFIG)
+        cp.read("%s/conf/%s" % (DBMANAGER_HOME, opts.config))    
+        comprobar_directorios(cp)
+    except Exception as e:
+        sys.stderr.write(e)
+        sys.exit(1)
 
-        context = Context()
-        context.home = YAOTP_HOME
-        context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
-        context.queue = cp.get("TDI", "cola")
-        context.user = cp.get("TDI", "user")
-        context.password = cp.get("TDI", "password")
-        context.batch_size = cp.get("TDI", "batch_size")
+    CURRENT_INSTANCE = obtener_nombre_instancia(cp)
+    CURRENT_FILE = obtener_nombre_archivo(__file__)
+    LOG_FILE = obtener_nombre_archivo_log(CURRENT_INSTANCE,
+            CURRENT_FILE)
 
-        context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
-        context.db = context.client.get_database(cp.get("MONGO", "db"))
-        context.debug = cp.getint("MONGO", "debug")
+    logging.basicConfig(level=logging.INFO, filename=LOG_FILE,
+            format=LOG_FORMAT)
+    log.info("=====> Inicio (%s)" % os.getpid())            
 
-        context.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
-                pool_pre_ping = True, pool_recycle = int(cp.get("SQL", "recycle")))
-        context.sql_metadata = sqlalchemy.MetaData(bind = context.sql_engine)
-
-        dispositivos.procesar(context)
-        notificaciones.procesar(context) 
-        mensajes.procesar(context)
-
+    try:
+        if not existe_instancia_activa(CURRENT_INSTANCE,
+                    CURRENT_FILE, os.getpid()):
+            main(cp)
+            borrar_watchdog(CURRENT_INSTANCE, CURRENT_FILE)
+        else:
+            log.warn("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:
         log.error(e)
         retval = 1
-    finally:
-        context.client.close()
-        context.sql_engine.dispose()
 
     log.info("<===== Fin (%s)" % os.getpid())
     sys.exit(retval)
