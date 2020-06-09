@@ -20,39 +20,92 @@ log = logging.getLogger(__name__)
 
 class LectorColas(threading.Thread):
     """
-    Lee las colas de T-Mobility e inserta directamente en colas AMQP
+    Lee las colas de T-Mobility e inserta directamente en colas AMQP. Genera
+    estadísticas cada 5 minutos que se envían a través del exchange stats
+    del vhost MONITOR.
+    Las estadísticas que se envían continen la siguiente información
+        1. Id de proceso (instancia.proceso)
+        2. Datetime en utc
+        3. Peticiones OK
+        4. Peticiones ERROR
+        5. Mensajes enviados OK
+        6. Mensajes enviados ERROR
     """
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
         self.worker = worker
+        self.context = worker.context
+        self._inicializar_estadisticas()
+
+    def _inicializar_estadisticas(self):
+        """
+        Inicializa el objeto con los datos de estadísticas
+        """
+        self._stats = {}
+        self._stats["id_proceso"] = "%s.%s" % (self.context.instancia, 
+                self.context.proceso)
+        self._stats["timestamp"] = datetime.datetime.utcnow()
+        self._stats["peticiones_OK"] = 0
+        self._stats["peticiones_ERROR"] = 0
+        self._stats["mensajes_recibidos"] = 0
+        self._stats["mensajes_enviados"] = 0
+
+    def _get_mensajes(self):
+        """
+        Hace petición a T-Mobility y devuelve un array de mensajes. Actualiza
+        las estadísticas de peticiones
+        """
+
+        t1 = datetime.datetime.now()
+        mensajes = ""
+        try:
+            res = requests.get("%smultipullTarget=%s&multipullMax=%s" % (
+                        self.context.url, 
+                        self.context.queue, 
+                        self.context.batch_size), 
+                    auth=(self.context.user, self.context.password))              
+            mensajes = res.text.splitlines()
+            self._stats["peticiones_OK"] += 1
+            self._stats["mensajes_recibidos"] += len(mensajes)
+        except Exception:
+            log.error("\tError conectando a T-Mobility")
+            self._stats["peticiones_ERROR"] += 1
+            mensajes = ""
+        t1 = datetime.datetime.now() - t1   
+        log.info("\tRecuperados %d mensajes en %s segundos" % (
+                len(mensajes), t1))
+
+        return mensajes
 
     def _runImpl(self):
         """
-        Lectura de mensajes de T-Mobility y envío por la exchange t-mobility 
+        Lectura de mensajes de T-Mobility y envío por la exchange T-Mobility. En
+        caso de que no se pueda enrutar un mensaje obtenido de se para inmediatamente
+        el servicio.
+        Aquí puede haber una pérdida de mensajes, pero eso solo ocurre en el caso de 
+        que el exchange no exista, y eso es altamente improbable. Y la conexión y el
+        canal ya ha sido abierto antes de hacer la petición a T-Mobility
         """
-
-        parameters = pika.URLParameters(context.amqp_dbmanager)
+        parameters = pika.URLParameters(self.context.amqp_dbmanager)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
 
-        t1 = datetime.datetime.now()
-        res = requests.get("%smultipullTarget=%s&multipullMax=%s" 
-                        % (context.url, context.queue, context.batch_size), 
-                auth=(context.user, context.password))              
-        t1 = datetime.datetime.now() - t1
-
-        t2 = datetime.datetime.now()
-        mensajes = res.text.splitlines()
+        mensajes = self._get_mensajes()
         for texto in mensajes:
             props = pika.BasicProperties()
             props.priority = 50
             props.message_id = str(uuid.uuid4())
             props.timestamp = int(time.time())
-            channel.basic_publish("tmobility", routing_key = "", 
-                    body = bytes(texto, "utf-8"),
-                    properties = props, 
-                    mandatory = True)
-        t2 = datetime.datetime.now() - t2
+            props.delivery_mode = 2
+            try:
+                channel.basic_publish("tmobility", routing_key = "", 
+                        body = bytes(texto, "utf-8"),
+                        properties = props, 
+                        mandatory = True)
+                self._stats["mensajes_enviados"] += 1
+            except pika.exceptions.UnroutableError as e:
+                log.error("\t*** Error enrutando mensajes de T-Mobility, parando servicio...")
+                raise e
 
         connection.close()
 
@@ -62,7 +115,7 @@ class LectorColas(threading.Thread):
         """
         while not self.worker.must_stop:
             self._runImpl()
-            time.sleep(3)                       # ¿metemos aquí una variable de configuración?
+            time.sleep(15)                       # ¿metemos aquí una variable de configuración?
 
 
 class ProcesarComandos(threading.Thread):
@@ -72,11 +125,10 @@ class ProcesarComandos(threading.Thread):
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
         self.worker = worker
+        self.context = worker.context
 
     def on_message(self, channel, method_frame, header_frame, body):
-        print(method_frame.delivery_tag)
-        print(body)
-        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+        #channel.basic_ack(delivery_tag=method_frame.delivery_tag)
         if b"STOP" in body:
             log.info("\tRecibido comando STOP...")
             channel.stop_consuming()
@@ -87,34 +139,18 @@ class ProcesarComandos(threading.Thread):
         """
         log.info("\tEscuchando la cola de comandos...")
 
-        parameters = pika.URLParameters(context.amqp_monitor)
+        parameters = pika.URLParameters(self.context.amqp_monitor)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
 
-        consumer_tag = ("%s.%s" % (context.instancia, context.proceso))
+        consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
         channel.basic_consume(queue = "commands",
-                on_message_callback=self.on_message,
-                consumer_tag=consumer_tag)
+                on_message_callback = self.on_message,
+                auto_ack = True,
+                consumer_tag = consumer_tag)
         channel.start_consuming()
         connection.close()
         self.worker.must_stop = True
-
-
-class EnviarEstado(threading.Thread):
-    """
-    Envía estadísticas de ejecución
-    """
-    def __init__(self, worker):
-        super().__init__(name = type(self).__name__)
-        self.worker = worker
-
-    def run(self):
-        """
-        Envía eventos
-        """
-        log.info("\tEscuchando la cola de comandos...")
-
-        print("EnviarEstados")
 
 class Worker():
     """
@@ -135,10 +171,6 @@ class Worker():
         thread.start()
 
         thread = ProcesarComandos(self)
-        threads.append(thread)
-        thread.start()
-
-        thread = EnviarEstado(self)
         threads.append(thread)
         thread.start()
 
