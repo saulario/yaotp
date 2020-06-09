@@ -69,7 +69,10 @@ def borrar_watchdog(context):
 
 def obtener_nombre_archivo(fichero):
     """
-    Para evitar escribir siempre esta instrucción
+    Para evitar escribir siempre esta instrucción. El nombre del archivo se
+    usa como el nombre del proceso, haciendo una equivalencia con argv[0].
+    El problema de argv[0] en python es que no necesariamente tiene el mismo
+    comportamiento en todos los sistemas operativos
     :param fichero: el valor de __file__ del fichero que se quiere obtener
     """
     return os.path.basename(fichero).split(".")[0]
@@ -85,7 +88,7 @@ def obtener_nombre_archivo_log(context):
 
 def obtener_contexto_desde_configuracion(cp):
     """
-    Genera un objeto Context desde los parámetros de configuración
+    Genera un objeto Context desde los parámetros de configuración.
     :param cp: parámetros de configuración
     """
     context = Context()

@@ -13,12 +13,14 @@ import threading
 import time
 import uuid
 
-from context import Context
-from environment import *
+# paquetes locales
+import context
+import environment as environ
+import handlers
 
 log = logging.getLogger(__name__)
 
-class LectorColas(threading.Thread):
+class TMobilityReader(threading.Thread):
     """
     Lee las colas de T-Mobility e inserta directamente en colas AMQP. Genera
     estadísticas cada 5 minutos que se envían a través del exchange stats
@@ -118,66 +120,6 @@ class LectorColas(threading.Thread):
             time.sleep(15)                       # ¿metemos aquí una variable de configuración?
 
 
-class ProcesarComandos(threading.Thread):
-    """
-    Escucha la cola de comandos 
-    """
-    def __init__(self, worker):
-        super().__init__(name = type(self).__name__)
-        self.worker = worker
-        self.context = worker.context
-
-    def on_message(self, channel, method_frame, header_frame, body):
-        #channel.basic_ack(delivery_tag=method_frame.delivery_tag)
-        if b"STOP" in body:
-            log.info("\tRecibido comando STOP...")
-            channel.stop_consuming()
-
-    def run(self):
-        """
-        Escucha la cola de comandos y ejecuta si procede
-        """
-        log.info("\tEscuchando la cola de comandos...")
-
-        parameters = pika.URLParameters(self.context.amqp_monitor)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-
-        consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
-        channel.basic_consume(queue = "commands",
-                on_message_callback = self.on_message,
-                auto_ack = True,
-                consumer_tag = consumer_tag)
-        channel.start_consuming()
-        connection.close()
-        self.worker.must_stop = True
-
-class Worker():
-    """
-    Clase para coordinar la comunicación entre threads
-    """
-    def __init__(self, context):
-        self.context = context
-        self.must_stop = False
-
-    def run(self):
-        """
-        Lanza los threads
-        """
-        threads = []
-
-        thread = LectorColas(self)
-        threads.append(thread)
-        thread.start()
-
-        thread = ProcesarComandos(self)
-        threads.append(thread)
-        thread.start()
-
-        for thread in threads:
-            thread.join()
-
-
 if __name__ == "__main__":
 
     parser = optparse.OptionParser(usage="usage: %prog [options]")
@@ -192,26 +134,29 @@ if __name__ == "__main__":
 
     try:
         cp = configparser.ConfigParser()
-        cp.read("%s/conf/%s" % (DBMANAGER_HOME, opts.config))    
-        comprobar_directorios(cp)
+        cp.read("%s/conf/%s" % (environ.DBMANAGER_HOME, opts.config))    
+        environ.comprobar_directorios(cp)
     except Exception as e:
         sys.stderr.write(e)
         sys.exit(1)
 
-    context = obtener_contexto_desde_configuracion(cp)
-    context.proceso = obtener_nombre_archivo(__file__)
-    LOG_FILE = obtener_nombre_archivo_log(context)
+    context = environ.obtener_contexto_desde_configuracion(cp)
+    context.proceso = environ.obtener_nombre_archivo(__file__)
+    LOG_FILE = environ.obtener_nombre_archivo_log(context)
 
     logging.basicConfig(level=logging.INFO, filename=LOG_FILE,
-            format=LOG_FORMAT)
+            format=environ.LOG_FORMAT)
     logging.getLogger("pika").setLevel(logging.ERROR)
 
     log.info("=====> Inicio (%s)" % os.getpid())            
 
     try:
-        if not existe_instancia_activa(context, os.getpid()):
-            Worker(context).run()
-            borrar_watchdog(context)
+        if not environ.existe_instancia_activa(context, os.getpid()):
+            handlers.BasicWorker(context).run(
+                    handlers.CommandQueueHandler,
+                    TMobilityReader
+            )
+            environ.borrar_watchdog(context)
         else:
             log.warn("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:
