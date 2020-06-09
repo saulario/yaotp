@@ -6,8 +6,9 @@ import sqlalchemy
 
 from context import Context
 
-DBMANAGER_HOME = ("%s/tdi/dbmanager-1.0" % os.path.expanduser("~"))
-LOG_FORMAT = "%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s"
+DBMANAGER_VERSION = "1.0"
+DBMANAGER_HOME = ("%s/tdi/dbmanager-%s" % (os.path.expanduser("~"), DBMANAGER_VERSION))
+LOG_FORMAT = "%(asctime)s %(levelname)s %(threadName)s %(module)s.%(funcName)s %(message)s"
 
 
 def comprobar_directorios(cp):
@@ -33,17 +34,16 @@ def comprobar_directorios(cp):
         os.mkdir(INSTANCE_RUN)        
 
 
-def existe_instancia_activa(cola, nombre, pid):
+def existe_instancia_activa(context, pid):
     """
     No puede habar una instancia activa de este proceso
-    :param cola: archivo de configuración leído
-    :param nombre: nombre del archivo que se ejecuta
+    :param context: contexto de ejecución
     :param pid: id de proceso que entra en ejecución
     """
     watchdog = ("%s/%s/run/%s.pid" % (
             DBMANAGER_HOME,
-            cola,
-            nombre
+            context.instancia,
+            context.proceso
         ))
     existe = os.path.exists(watchdog)    
     if not existe:
@@ -52,30 +52,19 @@ def existe_instancia_activa(cola, nombre, pid):
     return existe
 
 
-def borrar_watchdog(cola, nombre):
+def borrar_watchdog(context):
     """
     Cuando un proceso termina normalmente debe eliminar
     el watchdog para que permita un rearranque del proceso
-    :param cola: archivo de configuración leído
-    :param nombre: nombre del archivo que se ejecuta
+    :param context: contexto de ejecución
     """
     watchdog = ("%s/%s/run/%s.pid" % (
             DBMANAGER_HOME,
-            cola,
-            nombre
+            context.instancia,
+            context.proceso
         ))
     if os.path.exists(watchdog):
         os.remove(watchdog)
-
-
-def obtener_nombre_instancia(cp):
-    """
-    El nombre de la instancia se obtiene del fichero de
-    configuración, del propio nombre de la cola de T-Mobility. Se 
-    centraliza por si algún día cambia el criterio
-    :param cp: parámetros de configuración
-    """
-    return cp.get("TDI", "cola")
 
 
 def obtener_nombre_archivo(fichero):
@@ -86,14 +75,13 @@ def obtener_nombre_archivo(fichero):
     return os.path.basename(fichero).split(".")[0]
 
 
-def obtener_nombre_archivo_log(instancia, archivo):
+def obtener_nombre_archivo_log(context):
     """
     Para evitar centralizar la generación del nombre del archivo de log
-    :param instancia: nombre de la instancia
-    :param archivo: nombre del archivo de log
+    :param context: contexto de ejecución
     """
     return ("%s/%s/log/%s.log" % (DBMANAGER_HOME,
-            instancia, archivo))
+            context.instancia, context.proceso))
 
 def obtener_contexto_desde_configuracion(cp):
     """
@@ -103,6 +91,9 @@ def obtener_contexto_desde_configuracion(cp):
     context = Context()
 
     context.home = DBMANAGER_HOME
+    context.version = DBMANAGER_VERSION
+    context.instancia = cp.get("TDI", "cola")
+
     context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
     context.queue = cp.get("TDI", "cola")
     context.user = cp.get("TDI", "user")
@@ -116,6 +107,9 @@ def obtener_contexto_desde_configuracion(cp):
     context.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
             pool_pre_ping = True, pool_recycle = int(cp.get("SQL", "recycle")))
     context.sql_metadata = sqlalchemy.MetaData(bind = context.sql_engine)
+
+    context.amqp_dbmanager = cp.get("AMQP", "dbmanager")
+    context.amqp_monitor = cp.get("AMQP", "monitor")
 
     return context
 
