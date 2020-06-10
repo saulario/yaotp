@@ -92,6 +92,7 @@ class TMobilityReader(threading.Thread):
         """
 
         t1 = datetime.datetime.now()
+        notificaciones = []
         mensajes = []
         try:
             res = requests.get("%smultipullTarget=%s&multipullMax=%s" % (
@@ -99,24 +100,42 @@ class TMobilityReader(threading.Thread):
                         "Notifications%s" % self.context.queue, 
                         self.context.batch_size), 
                     auth=(self.context.user, self.context.password))              
-            mensajes = res.text.splitlines()
+            notificaciones = res.text.splitlines()
             res = requests.get("%smultipullTarget=%s&multipullMax=%s" % (
                         self.context.url, 
                         self.context.queue, 
                         self.context.batch_size), 
                     auth=(self.context.user, self.context.password))              
-            mensajes += res.text.splitlines()
+            mensajes = res.text.splitlines()
+            recibidos = len(notificaciones) + len(mensajes)
             self._stats["peticiones_OK"] += 1
-            self._stats["mensajes_recibidos"] += len(mensajes)
+            self._stats["mensajes_recibidos"] += recibidos
         except Exception:
             log.error("\tError conectando a T-Mobility")
             self._stats["peticiones_ERROR"] += 1
             mensajes = ""
         t1 = datetime.datetime.now() - t1   
-        log.info("\tRecuperados %d mensajes en %s segundos" % (
-                len(mensajes), t1))
+        log.info("\tRecuperados %d mensajes en %s segundos" % (recibidos, t1))
 
-        return mensajes
+        return (notificaciones, mensajes)
+
+    def _basic_publish(self, channel, body, properties):
+        """
+        Reenvía notificaciones y mensajes compartiendo canal
+        param: channel: canal de comunicaciones
+        param: body: mensaje en texto claro
+        param: properties: propiedades del mensaje
+        """
+        try:
+            channel.basic_publish(environ.INSTANCE_TMOBILITY_EXCHANGE, 
+                    routing_key = "", 
+                    body = bytes(body, "utf-8"),
+                    properties = properties, 
+                    mandatory = True)
+            self._stats["mensajes_enviados"] += 1
+        except pika.exceptions.UnroutableError as e:
+            log.error("\t*** Error enrutando mensajes de T-Mobility, parando servicio...")
+            raise e
 
     def _runImpl(self):
         """
@@ -131,27 +150,29 @@ class TMobilityReader(threading.Thread):
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
         iid = str(uuid.uuid4())
-        mensajes = self._get_mensajes()
+        props = pika.BasicProperties()
+        props.priority = 50
+        props.message_id = str(uuid.uuid4())
+        props.timestamp = int(time.time())
+        props.delivery_mode = 2
+        props.headers = {
+            "interchange_id" : iid,
+            "node" : platform.node(),
+        }
+        notificaciones, mensajes = self._get_mensajes()
+
+        for texto in notificaciones:
+            props.headers["type"] = "notification"
+            self._basic_publish(channel, 
+                    body = texto,
+                    properties = props)
+
         for texto in mensajes:
-            props = pika.BasicProperties()
-            props.priority = 50
-            props.message_id = str(uuid.uuid4())
-            props.timestamp = int(time.time())
-            props.delivery_mode = 2
-            props.headers = {
-                "interchange_id" : iid,
-                "node" : platform.node()
-            }
-            try:
-                channel.basic_publish(environ.INSTANCE_TMOBILITY_EXCHANGE, 
-                        routing_key = "", 
-                        body = bytes(texto, "utf-8"),
-                        properties = props, 
-                        mandatory = True)
-                self._stats["mensajes_enviados"] += 1
-            except pika.exceptions.UnroutableError as e:
-                log.error("\t*** Error enrutando mensajes de T-Mobility, parando servicio...")
-                raise e
+            props.headers["type"] = "message"
+            self._basic_publish(channel, 
+                    body = texto,
+                    properties = props)
+
         connection.close()
         self._enviar_estadisticas()
 
