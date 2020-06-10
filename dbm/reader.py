@@ -2,11 +2,13 @@
 
 import configparser
 import datetime
+import json
 import logging
 import optparse
 import os
 import os.path
 import pika
+import platform
 import requests
 import sys
 import threading
@@ -33,6 +35,7 @@ class TMobilityReader(threading.Thread):
         5. Mensajes enviados OK
         6. Mensajes enviados ERROR
     """
+
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
         self.worker = worker
@@ -46,11 +49,41 @@ class TMobilityReader(threading.Thread):
         self._stats = {}
         self._stats["id_proceso"] = "%s.%s" % (self.context.instancia, 
                 self.context.proceso)
-        self._stats["timestamp"] = datetime.datetime.utcnow()
+        self._stats["timestamp"] = str(datetime.datetime.utcnow())
         self._stats["peticiones_OK"] = 0
         self._stats["peticiones_ERROR"] = 0
         self._stats["mensajes_recibidos"] = 0
         self._stats["mensajes_enviados"] = 0
+        self._ultimo_envio = datetime.datetime.now()
+
+    def _enviar_estadisticas(self, forzar = False):
+        """
+        Se envían estadísticas pasado un intervalo de n minutos y al terminar
+        la ejecución del proceso. Se ejecuta en cada ciclo, pero es aquí 
+        donde se controla si ha transcurrido tiempo suficiente
+        param: forzar: envío forzado aunque no haya pasado el tiempo
+        """
+        t2 = datetime.datetime.now() - self._ultimo_envio
+        if not forzar and t2.seconds < environ.MONITOR_STATS_INTERVAL:
+            return
+        log.info("\tEnviando estadísticas ...")
+        parameters = pika.URLParameters(self.context.amqp_monitor)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        try:
+            props = pika.BasicProperties()
+            props.headers = {
+                 "node" : platform.node()
+            }
+            channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
+                    routing_key = "", 
+                    body = bytes(json.dumps(self._stats), "utf-8"),
+                    properties = props,
+                    mandatory = True)
+        except pika.exceptions.UnroutableError:
+            log.error("\t*** Error enviando estadísticas")
+        connection.close()
+        self._inicializar_estadisticas()
 
     def _get_mensajes(self):
         """
@@ -106,10 +139,12 @@ class TMobilityReader(threading.Thread):
             props.timestamp = int(time.time())
             props.delivery_mode = 2
             props.headers = {
-                "interchange_id" : iid
+                "interchange_id" : iid,
+                "node" : platform.node()
             }
             try:
-                channel.basic_publish("tmobility", routing_key = "", 
+                channel.basic_publish(environ.INSTANCE_TMOBILITY_EXCHANGE, 
+                        routing_key = "", 
                         body = bytes(texto, "utf-8"),
                         properties = props, 
                         mandatory = True)
@@ -117,8 +152,8 @@ class TMobilityReader(threading.Thread):
             except pika.exceptions.UnroutableError as e:
                 log.error("\t*** Error enrutando mensajes de T-Mobility, parando servicio...")
                 raise e
-
         connection.close()
+        self._enviar_estadisticas()
 
     def run(self):
         """
@@ -127,7 +162,7 @@ class TMobilityReader(threading.Thread):
         while not self.worker.must_stop:
             self._runImpl()
             time.sleep(15)                       # ¿metemos aquí una variable de configuración?
-
+        self._enviar_estadisticas(forzar = True)
 
 if __name__ == "__main__":
 

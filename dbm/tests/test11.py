@@ -1,8 +1,18 @@
-import pika
+import datetime
+import json
 
 if __name__ == "__main__":
-    params = pika.URLParameters("amqp://guest:guest@localhost:5672/MONITOR")
-    connection = pika.BlockingConnection(params)
-    channel = connection.channel()
 
-    connection.close()
+    d = {}
+    d["cadena"] = "cadena"
+    d["compuesto"] = {}
+    d["compuesto"]["entero"]  = 100
+    d["compuesto"]["decimal"]  = 100.25
+    d["compuesto"]["fecha"]  = str(datetime.date.today())
+    d["compuesto"]["fecha_hora"]  = str(datetime.datetime.now())
+    d["timedelta"]  = str(datetime.datetime.now() -  datetime.datetime.utcnow())
+    d["time"]  = str(datetime.datetime.now().time())
+
+
+    a = json.dumps(d)
+    print(a)

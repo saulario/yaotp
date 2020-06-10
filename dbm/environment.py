@@ -4,11 +4,23 @@ import os
 import pymongo
 import sqlalchemy
 
-from context import Context
+import context
 
+LOG_FORMAT = "%(asctime)s %(levelname)s %(threadName)s %(module)s.%(funcName)s %(message)s"
+
+# 
 DBMANAGER_VERSION = "1.0"
 DBMANAGER_HOME = ("%s/tdi/dbmanager-%s" % (os.path.expanduser("~"), DBMANAGER_VERSION))
-LOG_FORMAT = "%(asctime)s %(levelname)s %(threadName)s %(module)s.%(funcName)s %(message)s"
+
+#
+MONITOR_COMMANDS_EXCHANGE = "commands"      
+MONITOR_STATS_EXCHANGE = "stats"            
+MONITOR_STATS_INTERVAL = 300
+
+#
+INSTANCE_TMOBILITY_EXCHANGE = "tmobility"
+INSTANCE_MESSAGES_EXCHANGE = "messages"
+
 
 
 def comprobar_directorios(cp):
@@ -91,29 +103,29 @@ def obtener_contexto_desde_configuracion(cp):
     Genera un objeto Context desde los parámetros de configuración.
     :param cp: parámetros de configuración
     """
-    context = Context()
+    ctx = context.Context()
 
-    context.home = DBMANAGER_HOME
-    context.version = DBMANAGER_VERSION
-    context.instancia = cp.get("TDI", "cola")
+    ctx.home = DBMANAGER_HOME
+    ctx.version = DBMANAGER_VERSION
+    ctx.instancia = cp.get("TDI", "cola")
 
-    context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
-    context.queue = cp.get("TDI", "cola")
-    context.user = cp.get("TDI", "user")
-    context.password = cp.get("TDI", "password")
-    context.batch_size = cp.get("TDI", "batch_size")
+    ctx.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
+    ctx.queue = cp.get("TDI", "cola")
+    ctx.user = cp.get("TDI", "user")
+    ctx.password = cp.get("TDI", "password")
+    ctx.batch_size = cp.get("TDI", "batch_size")
 
-    context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
-    context.db = context.client.get_database(cp.get("MONGO", "db"))
-    context.debug = cp.getint("MONGO", "debug")
+    ctx.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
+    ctx.db = ctx.client.get_database(cp.get("MONGO", "db"))
+    ctx.debug = cp.getint("MONGO", "debug")
 
-    context.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
+    ctx.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
             pool_pre_ping = True, pool_recycle = int(cp.get("SQL", "recycle")))
-    context.sql_metadata = sqlalchemy.MetaData(bind = context.sql_engine)
+    ctx.sql_metadata = sqlalchemy.MetaData(bind = ctx.sql_engine)
 
-    context.amqp_dbmanager = cp.get("AMQP", "dbmanager")
-    context.amqp_monitor = cp.get("AMQP", "monitor")
+    ctx.amqp_dbmanager = cp.get("AMQP", "dbmanager")
+    ctx.amqp_monitor = cp.get("AMQP", "monitor")
 
-    return context
+    return ctx
 
 
