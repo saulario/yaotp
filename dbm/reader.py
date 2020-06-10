@@ -22,7 +22,7 @@ import handlers
 
 log = logging.getLogger(__name__)
 
-class TMobilityReader(threading.Thread):
+class ReaderImpl(threading.Thread):
     """
     Lee las colas de T-Mobility e inserta directamente en colas AMQP. Genera
     estadísticas cada 5 minutos que se envían a través del exchange stats
@@ -217,10 +217,7 @@ if __name__ == "__main__":
 
     try:
         if not environ.existe_instancia_activa(context, os.getpid()):
-            handlers.BasicWorker(context).run(
-                    handlers.CommandQueueHandler,
-                    TMobilityReader
-            )
+            handlers.BasicWorker(context).run(ReaderImpl)
             environ.borrar_instancia_activa(context)
         else:
             log.warn("*** Saliendo, existe una instancia en ejecución")

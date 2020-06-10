@@ -4,6 +4,8 @@ import logging
 import pika
 import threading
 
+import environment as environ
+
 log = logging.getLogger(__name__)
 
 class CommandQueueHandler(threading.Thread):
@@ -12,8 +14,6 @@ class CommandQueueHandler(threading.Thread):
     Necesita una referencia al worker que controla para poder activarle el 
     bit de parada, con el que le señaliza que debe terminar su ejecución
     """
-    COMMAND_EXCHANGE = "commands"
-
     def __init__(self, worker):
         """
         Constructor. Da al thread el mismo nombre que la propia clase
@@ -42,11 +42,11 @@ class CommandQueueHandler(threading.Thread):
         parameters = pika.URLParameters(self.context.amqp_monitor)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        queue = "%s.%s.%s" % (CommandQueueHandler.COMMAND_EXCHANGE,
+        queue = "%s.%s.%s" % (environ.MONITOR_COMMANDS_EXCHANGE,
                 self.context.instancia,
                 self.context.proceso)
         channel.queue_declare(queue, exclusive = True, auto_delete = True)
-        channel.queue_bind(queue, CommandQueueHandler.COMMAND_EXCHANGE)
+        channel.queue_bind(queue, environ.MONITOR_COMMANDS_EXCHANGE)
         consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
         channel.basic_consume(queue = queue,
                 on_message_callback = self.on_message,
@@ -67,11 +67,12 @@ class BasicWorker():
         self.context = context
         self.must_stop = False
 
-    def run(self, handler, process):
+    def run(self, process, handler = CommandQueueHandler):
         """
         Lanza la ejecución de un proceso dependiente de un command handler
-        param: handler: control de comandos
         param: process: proceso a ejecutar
+        param: handler: control de comandos, si se omite asigna por defecto
+                        CommandQueueHandler
         """
         log.info("-----> Inicio")
 

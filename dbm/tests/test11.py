@@ -1,18 +1,31 @@
 import datetime
 import json
 
+class P1():
+
+    def __init__(self):
+        print("Constructor de P1")
+
+class P2():
+
+    def __init__(self):
+        print("Constructor de P2")
+        self.variable = 1000
+
+class P3(P1, P2):
+
+    def __init__(self):
+        P1.__init__(self)
+        P2.__init__(self)
+
+    def hola(self):
+        print("hola")
+
+
 if __name__ == "__main__":
 
-    d = {}
-    d["cadena"] = "cadena"
-    d["compuesto"] = {}
-    d["compuesto"]["entero"]  = 100
-    d["compuesto"]["decimal"]  = 100.25
-    d["compuesto"]["fecha"]  = str(datetime.date.today())
-    d["compuesto"]["fecha_hora"]  = str(datetime.datetime.now())
-    d["timedelta"]  = str(datetime.datetime.now() -  datetime.datetime.utcnow())
-    d["time"]  = str(datetime.datetime.now().time())
+    p3 = P3()
+    print(p3.variable)
 
 
-    a = json.dumps(d)
-    print(a)
+    pass

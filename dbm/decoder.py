@@ -1,87 +1,142 @@
-#
-#    Copyright (C) from 2017 onwards Saul Correas Subias (saul dot correas at gmail dot com)
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#!/usr/bin/python3
 
 import configparser
+import datetime
+import json
 import logging
+import optparse
 import os
-import pymongo
+import os.path
+import pika
+import platform
+import requests
 import sys
+import threading
+import time
+import uuid
 
-import sqlalchemy
+# paquetes locales
+import context
+import environment as environ
+import handlers
 
-import parser.dispositivos as dispositivos
-import parser.mensajes as mensajes
-import parser.notificaciones as notificaciones
-
-from context import Context
-from bl import schema
-
-YAOTP_HOME = ("%s/yaotp" % os.path.expanduser("~"))
-YAOTP_CONFIG = ("%s/etc/yaotp.config" % YAOTP_HOME)
-YAOTP_LOG = ("%s/log/%s.log" %
-             (YAOTP_HOME, os.path.basename(__file__).split(".")[0]))
-logging.basicConfig(level=logging.INFO, filename=YAOTP_LOG,
-                    format="%(asctime)s %(levelname)s %(module)s.%(funcName)s %(message)s")
 log = logging.getLogger(__name__)
 
+class DecoderImpl(threading.Thread):
+    """
+    Lee la cola AMQP tmobility para decodificar los mensajes recibidos. Separa
+    en implementaciones separadas por tipos de mensaje e incluso para notificaciones.
+    Los mensajes que disparan procesos una vez persistidos se reenvían por el
+    exchange AMQP messages, donde se redistribuyen por el routing key. Los routing
+    keys activos son
+
+        * tdi.data          -> data
+        * tdi.notifications -> notifications
+        * ...
+    
+    El envío de estadísticas se hace a través de la funcionalidad heradada del
+    mixin
+    """
+
+    def __init__(self, worker):
+        super().__init__(name = type(self).__name__)
+        self.worker = worker
+        self.context = worker.context
+        self._inicializar_estadisticas()
+
+    def _inicializar_estadisticas(self):
+        """
+        Inicializa el objeto con los datos de estadísticas
+        """
+        self._stats = {}
+        self._stats["id_proceso"] = "%s.%s" % (self.context.instancia, 
+                self.context.proceso)
+        self._stats["timestamp"] = str(datetime.datetime.utcnow())
+        self._stats["peticiones_OK"] = 0
+        self._stats["peticiones_ERROR"] = 0
+        self._stats["mensajes_recibidos"] = 0
+        self._stats["mensajes_enviados"] = 0
+        self._ultimo_envio = datetime.datetime.now()
+
+    def _enviar_estadisticas(self, forzar = False):
+        """
+        Se envían estadísticas pasado un intervalo de n minutos y al terminar
+        la ejecución del proceso. Se ejecuta en cada ciclo, pero es aquí 
+        donde se controla si ha transcurrido tiempo suficiente
+        param: forzar: envío forzado aunque no haya pasado el tiempo
+        """
+        t2 = datetime.datetime.now() - self._ultimo_envio
+        if not forzar and t2.seconds < environ.MONITOR_STATS_INTERVAL:
+            return
+        log.info("\tEnviando estadísticas ...")
+        parameters = pika.URLParameters(self.context.amqp_monitor)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        try:
+            props = pika.BasicProperties()
+            props.headers = {
+                 "node" : platform.node()
+            }
+            channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
+                    routing_key = "", 
+                    body = bytes(json.dumps(self._stats), "utf-8"),
+                    properties = props,
+                    mandatory = True)
+        except pika.exceptions.UnroutableError:
+            log.error("\t*** Error enviando estadísticas")
+        connection.close()
+        self._inicializar_estadisticas()
 
 
+    def run(self):
+        """
+        Ejecución del worker
+        """
+        while not self.worker.must_stop:
+            print("Ejecutando")
+            time.sleep(15) 
+        #self._enviar_estadisticas(forzar = True)
 
 
-
-#
-#
-#
 if __name__ == "__main__":
-    """
-    Main module
-    """
-    log.info("=====> Inicio (%s)" % os.getpid())
+
+    parser = optparse.OptionParser(usage="usage: %prog [options]")
+    parser.add_option("-c", "--config",  default="DESARROLLO.config",
+                  help="Fichero de configuración de la instancia (%default)")
+    opts, args = parser.parse_args()
+
     retval = 0
+    if opts.config is None:
+        sys.stderr.write("Salida: no se ha especificado fichero de configuración\n")
+        sys.exit(0)
 
     try:
         cp = configparser.ConfigParser()
-        cp.read(YAOTP_CONFIG)
+        cp.read("%s/conf/%s" % (environ.DBMANAGER_HOME, opts.config))    
+        environ.comprobar_directorios(cp)
+    except Exception as e:
+        sys.stderr.write(e)
+        sys.exit(1)
 
-        context = Context()
-        context.home = YAOTP_HOME
-        context.url = ("%s/tdi/AMMForm?" % cp.get("TDI", "url_formatos"))
-        context.queue = cp.get("TDI", "cola")
-        context.user = cp.get("TDI", "user")
-        context.password = cp.get("TDI", "password")
-        context.batch_size = cp.get("TDI", "batch_size")
+    context = environ.obtener_contexto_desde_configuracion(cp)
+    context.proceso = environ.obtener_nombre_archivo(__file__)
+    LOG_FILE = environ.obtener_nombre_archivo_log(context)
 
-        context.client = pymongo.MongoClient(cp.get("MONGO", "uri"))
-        context.db = context.client.get_database(cp.get("MONGO", "db"))
-        context.debug = cp.getint("MONGO", "debug")
+    logging.basicConfig(level=logging.INFO, filename=LOG_FILE,
+            format=environ.LOG_FORMAT)
+    logging.getLogger("pika").setLevel(logging.ERROR)
 
-        context.sql_engine = sqlalchemy.create_engine(cp.get("SQL", "uri"),
-                pool_pre_ping = True, pool_recycle = int(cp.get("SQL", "recycle")))
-        context.sql_metadata = sqlalchemy.MetaData(bind = context.sql_engine)
+    log.info("=====> Inicio (%s)" % os.getpid())            
 
-        dispositivos.procesar(context)
-        notificaciones.procesar(context) 
-        mensajes.procesar(context)
-
+    try:
+        if not environ.existe_instancia_activa(context, os.getpid()):
+            handlers.BasicWorker(context).run(DecoderImpl)
+            environ.borrar_instancia_activa(context)
+        else:
+            log.warn("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:
         log.error(e)
         retval = 1
-    finally:
-        context.client.close()
-        context.sql_engine.dispose()
 
     log.info("<===== Fin (%s)" % os.getpid())
     sys.exit(retval)
