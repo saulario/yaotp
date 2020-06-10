@@ -12,7 +12,7 @@ class CommandQueueHandler(threading.Thread):
     Necesita una referencia al worker que controla para poder activarle el 
     bit de parada, con el que le señaliza que debe terminar su ejecución
     """
-    COMMAND_QUEUE = "commands"
+    COMMAND_EXCHANGE = "commands"
 
     def __init__(self, worker):
         """
@@ -42,9 +42,11 @@ class CommandQueueHandler(threading.Thread):
         parameters = pika.URLParameters(self.context.amqp_monitor)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-
+        queue = self.context.instancia + "." + self.context.proceso
+        channel.queue_declare(queue, exclusive = True, auto_delete = True)
+        channel.queue_bind(queue, CommandQueueHandler.COMMAND_EXCHANGE)
         consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
-        channel.basic_consume(queue = CommandQueueHandler.COMMAND_QUEUE,
+        channel.basic_consume(queue = queue,
                 on_message_callback = self.on_message,
                 auto_ack = True,
                 consumer_tag = consumer_tag)
