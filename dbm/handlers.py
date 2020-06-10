@@ -42,7 +42,9 @@ class CommandQueueHandler(threading.Thread):
         parameters = pika.URLParameters(self.context.amqp_monitor)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        queue = self.context.instancia + "." + self.context.proceso
+        queue = "%s.%s.%s" % (CommandQueueHandler.COMMAND_EXCHANGE,
+                self.context.instancia,
+                self.context.proceso)
         channel.queue_declare(queue, exclusive = True, auto_delete = True)
         channel.queue_bind(queue, CommandQueueHandler.COMMAND_EXCHANGE)
         consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
