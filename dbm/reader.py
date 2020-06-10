@@ -59,14 +59,20 @@ class TMobilityReader(threading.Thread):
         """
 
         t1 = datetime.datetime.now()
-        mensajes = ""
+        mensajes = []
         try:
+            res = requests.get("%smultipullTarget=%s&multipullMax=%s" % (
+                        self.context.url, 
+                        "Notifications%s" % self.context.queue, 
+                        self.context.batch_size), 
+                    auth=(self.context.user, self.context.password))              
+            mensajes = res.text.splitlines()
             res = requests.get("%smultipullTarget=%s&multipullMax=%s" % (
                         self.context.url, 
                         self.context.queue, 
                         self.context.batch_size), 
                     auth=(self.context.user, self.context.password))              
-            mensajes = res.text.splitlines()
+            mensajes += res.text.splitlines()
             self._stats["peticiones_OK"] += 1
             self._stats["mensajes_recibidos"] += len(mensajes)
         except Exception:
@@ -91,7 +97,7 @@ class TMobilityReader(threading.Thread):
         parameters = pika.URLParameters(self.context.amqp_dbmanager)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-
+        iid = str(uuid.uuid4())
         mensajes = self._get_mensajes()
         for texto in mensajes:
             props = pika.BasicProperties()
@@ -99,6 +105,9 @@ class TMobilityReader(threading.Thread):
             props.message_id = str(uuid.uuid4())
             props.timestamp = int(time.time())
             props.delivery_mode = 2
+            props.headers = {
+                "interchange_id" : iid
+            }
             try:
                 channel.basic_publish("tmobility", routing_key = "", 
                         body = bytes(texto, "utf-8"),
@@ -156,7 +165,7 @@ if __name__ == "__main__":
                     handlers.CommandQueueHandler,
                     TMobilityReader
             )
-            environ.borrar_watchdog(context)
+            environ.borrar_instancia_activa(context)
         else:
             log.warn("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:

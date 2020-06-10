@@ -52,7 +52,7 @@ def existe_instancia_activa(context, pid):
     return existe
 
 
-def borrar_watchdog(context):
+def borrar_instancia_activa(context):
     """
     Cuando un proceso termina normalmente debe eliminar
     el watchdog para que permita un rearranque del proceso
