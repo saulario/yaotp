@@ -52,11 +52,11 @@ def parser_factory(context, texto):
         return parser
     
     id_dev = int(campos[1])
-    if not id_dev in context.get_dispositivos():
+    if not id_dev in context.dispositivos:
         log.warn("<----- Dispositivo %d no encontrado, saliendo..." % id_dev)
         return parser
         
-    dispositivo = context.get_dispositivos()[id_dev]
+    dispositivo = context.dispositivos[id_dev]
     tipo = campos[2]
     
     if tipo.startswith("TDI*P="):

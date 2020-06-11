@@ -2,11 +2,17 @@
 
 import logging
 import pika
+import requests
 import threading
 
 import environment as environ
 
 log = logging.getLogger(__name__)
+
+
+
+
+
 
 class CommandQueueHandler(threading.Thread):
     """

@@ -16,13 +16,102 @@ import time
 import uuid
 
 # paquetes locales
+import parser.analizador as analizador
 import context
 import environment as environ
 import handlers
 
 log = logging.getLogger(__name__)
 
-class DecoderImpl(threading.Thread):
+class CargadorDeDispositivosMixin():
+    """
+    Mixin para incorporar la funcionalidad de recarga de
+    dispositivos desde T-Mobility
+    """
+
+    """Expira la cache de dispositivos cada 15 minutos"""
+    EXPIRATION_TIME = 900   
+
+    def __init__(self, context):
+        """
+        Constructor, debe ser invocado para inyectar el contexto
+        """
+        self._context = context
+        self._last_update = None
+
+    def _lista_obsoleta(self):
+        """
+        La lista queda obsoleta pasados EXPIRATION_TIME o si no se ha actualizado
+        """
+        if self._last_update is None:
+            return True
+        td = datetime.datetime.now() - self._last_update
+        return td.seconds > CargadorDeDispositivosMixin.EXPIRATION_TIME
+
+    def actualizarDispositivos(self):
+        """
+        Actualiza los dispositivos en el contexto. 
+        """
+        if not self._lista_obsoleta():
+            return
+
+        log.info("Actualizando dispositivos desde T-Mobility...")
+        dispositivos = {}
+        try:
+            res = requests.get("%sinfoTarget=%s" % (self.context.url, self.context.queue), 
+                    auth=(self.context.user, self.context.password))        
+            dispositivos = res.json()
+        except Exception:
+            log.error("*** Error leyendo dispositivos de T-Mobility")
+       
+        key = "INFO_DEVICE"
+        if key in dispositivos:
+            dd = {}
+            for dispositivo in dispositivos[key]:
+                dispositivo["ID_MOVIL"] = int(dispositivo["ID_MOVIL"])
+                dispositivo["fabricante"] = "TDI"
+                dispositivo["maskBin"] = int(dispositivo["MASK"][::-1], base=2)
+                dispositivo["maskextBin"] = int(dispositivo["MASKEXT"][::-1], base=2)
+                dd[dispositivo["ID_MOVIL"]] = dispositivo
+            self._context.dispositivos = dd
+            self._last_update = datetime.datetime.now()
+
+
+class AMQPSendBackMixin():
+    """
+    Mixin para incorporar la funcionalidad de devolución a la cola de origen
+    si ha dado algún error de proceso
+    """
+
+    """Número máximo de rebotes de mensaje antes de descartarlo definitivamente"""
+    MAX_DELIVERY_COUNT = 10
+
+    def __init__(self, context):
+        self.__context = context
+
+    def sendBack(self, properties, body):
+        pass
+
+class AMQPPublishMixin():
+    """
+    Mixin para incorporar la funcionalidad de reenvío por colas AMQP una vez
+    decodificado e insertado en base de datos
+    """
+
+    def __init__(self, context):
+        self.__context = context
+
+    def publish(self, properties, message):
+        pass
+
+
+
+
+
+
+
+class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
+        AMQPPublishMixin, AMQPSendBackMixin):
     """
     Lee la cola AMQP tmobility para decodificar los mensajes recibidos. Separa
     en implementaciones separadas por tipos de mensaje e incluso para notificaciones.
@@ -42,6 +131,10 @@ class DecoderImpl(threading.Thread):
 
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
+        CargadorDeDispositivosMixin.__init__(self, context)
+        AMQPPublishMixin.__init__(self, context)
+        AMQPSendBackMixin.__init__(self, context)
+
         self.worker = worker
         self.context = worker.context
         self._inicializar_estadisticas()
@@ -92,14 +185,18 @@ class DecoderImpl(threading.Thread):
             log.error("\t*** Error enviando estadísticas")
         connection.close()
         self._inicializar_estadisticas()
+        
 
     def _on_message(self, method, properties, body):
         """
         Procesamiento del mensaje
         """
-
-        print(body)
-        pass
+        try:
+            mensaje = analizador.parse(self.context, str(body, "utf-8"))
+            self.publish(properties, mensaje)
+        except Exception as e:
+            log.warn(e)
+            self.sendBack(properties, body)
 
 
     def run(self):
@@ -111,6 +208,7 @@ class DecoderImpl(threading.Thread):
         channel = connection.channel()
 
         while not self.worker.must_stop:
+            self.actualizarDispositivos()
             method, properties, body = channel.basic_get(
                     environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = True)
             while method is not None:
