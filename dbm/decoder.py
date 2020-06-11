@@ -38,6 +38,8 @@ class DecoderImpl(threading.Thread):
     mixin
     """
 
+    TMOBILITY_QUEUE = "tmobility"
+
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
         self.worker = worker
@@ -65,6 +67,10 @@ class DecoderImpl(threading.Thread):
         donde se controla si ha transcurrido tiempo suficiente
         param: forzar: envío forzado aunque no haya pasado el tiempo
         """
+
+        if True or False:
+            return
+
         t2 = datetime.datetime.now() - self._ultimo_envio
         if not forzar and t2.seconds < environ.MONITOR_STATS_INTERVAL:
             return
@@ -88,14 +94,33 @@ class DecoderImpl(threading.Thread):
         self._inicializar_estadisticas()
 
 
+    def on_message(self, channel, method_frame, header_frame, body):
+        """
+        Procesa todos los mensajes recibidos, ya sean mensajes o notificaciones.
+        """
+        print(body)
+        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+
+        if self.worker.must_stop:
+            channel.stop_consuming()
+
     def run(self):
         """
-        Ejecución del worker
+        Punto de entrada del proceso
         """
-        while not self.worker.must_stop:
-            print("Ejecutando")
-            time.sleep(15) 
-        #self._enviar_estadisticas(forzar = True)
+        log.info("\tIniciando el decodificador de mensajes...")
+        parameters = pika.URLParameters(self.context.amqp_dbmanager)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
+        channel.basic_consume(queue = DecoderImpl.TMOBILITY_QUEUE,
+                on_message_callback = self.on_message,
+                auto_ack = False,
+                consumer_tag = consumer_tag)
+        channel.start_consuming()
+        connection.close()
+        self.worker.must_stop = True       
+        self._enviar_estadisticas(forzar = True)
 
 
 if __name__ == "__main__":

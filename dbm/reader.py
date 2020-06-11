@@ -158,6 +158,7 @@ class ReaderImpl(threading.Thread):
         props.headers = {
             "interchange_id" : iid,
             "node" : platform.node(),
+            "delivery_count" : 0
         }
         notificaciones, mensajes = self._get_mensajes()
 
