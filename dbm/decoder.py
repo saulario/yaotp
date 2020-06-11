@@ -38,7 +38,7 @@ class DecoderImpl(threading.Thread):
     mixin
     """
 
-    TMOBILITY_QUEUE = "tmobility"
+    SLEEP_TIME = 5
 
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
@@ -93,34 +93,36 @@ class DecoderImpl(threading.Thread):
         connection.close()
         self._inicializar_estadisticas()
 
+    def _on_message(self, method, properties, body):
+        """
+        Procesamiento del mensaje
+        """
 
-    def on_message(self, channel, method_frame, header_frame, body):
-        """
-        Procesa todos los mensajes recibidos, ya sean mensajes o notificaciones.
-        """
         print(body)
-        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+        pass
 
-        if self.worker.must_stop:
-            channel.stop_consuming()
 
     def run(self):
         """
-        Punto de entrada del proceso
+        Punto de entrada del thread
         """
-        log.info("\tIniciando el decodificador de mensajes...")
         parameters = pika.URLParameters(self.context.amqp_dbmanager)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        consumer_tag = ("%s.%s" % (self.context.instancia, self.context.proceso))
-        channel.basic_consume(queue = DecoderImpl.TMOBILITY_QUEUE,
-                on_message_callback = self.on_message,
-                auto_ack = False,
-                consumer_tag = consumer_tag)
-        channel.start_consuming()
+
+        while not self.worker.must_stop:
+            method, properties, body = channel.basic_get(
+                    environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = True)
+            while method is not None:
+                self._on_message(method, properties, body)
+                if self.worker.must_stop:
+                    break
+                method, properties, body = channel.basic_get(
+                        environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = True)
+            time.sleep(DecoderImpl.SLEEP_TIME)
+
+        channel.close()
         connection.close()
-        self.worker.must_stop = True       
-        self._enviar_estadisticas(forzar = True)
 
 
 if __name__ == "__main__":

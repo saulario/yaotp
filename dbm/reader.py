@@ -36,6 +36,8 @@ class ReaderImpl(threading.Thread):
         6. Mensajes enviados ERROR
     """
 
+    SLEEP_TIME = 15
+
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
         self.worker = worker
@@ -183,7 +185,7 @@ class ReaderImpl(threading.Thread):
         """
         while not self.worker.must_stop:
             self._runImpl()
-            time.sleep(15)                       # ¿metemos aquí una variable de configuración?
+            time.sleep(ReaderImpl.SLEEP_TIME)
         self._enviar_estadisticas(forzar = True)
 
 if __name__ == "__main__":

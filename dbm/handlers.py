@@ -90,4 +90,3 @@ class BasicWorker():
             thread.join()        
 
         log.info("<----- Fin")
-
