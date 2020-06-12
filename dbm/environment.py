@@ -13,11 +13,23 @@ DBMANAGER_VERSION = "1.0"
 DBMANAGER_HOME = ("%s/tdi/dbmanager-%s" % (os.path.expanduser("~"), DBMANAGER_VERSION))
 
 #
+DEFAULT_ROUTING_KEY = ""
+
+# headers
+DELIVERY_COUNT_HEADER = "delivery_count"
+INTERCHANGE_ID_HEADER = "interchange_id"
+NODE_HEADER = "node"
+
+TYPE_HEADER = "type"
+TYPE_HEADER_MESSAGE = "message"
+TYPE_HEADER_NOTIFICATION = "notification"
+
+# virtual host monitor
 MONITOR_COMMANDS_EXCHANGE = "commands"      
 MONITOR_STATS_EXCHANGE = "stats"            
 MONITOR_STATS_INTERVAL = 300
 
-#
+# virtual host de instancia
 INSTANCE_TMOBILITY_EXCHANGE = "tmobility"
 INSTANCE_MESSAGES_EXCHANGE = "messages"
 

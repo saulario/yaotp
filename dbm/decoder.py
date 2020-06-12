@@ -8,6 +8,7 @@ import optparse
 import os
 import os.path
 import pika
+import pickle
 import platform
 import requests
 import sys
@@ -23,7 +24,15 @@ import handlers
 
 log = logging.getLogger(__name__)
 
-class CargadorDeDispositivosMixin():
+class BaseMixin():
+    """
+    Implementa el método vacío dispose
+    """
+    def dispose(self):
+        pass
+
+
+class CargadorDeDispositivosMixin(BaseMixin):
     """
     Mixin para incorporar la funcionalidad de recarga de
     dispositivos desde T-Mobility
@@ -36,23 +45,23 @@ class CargadorDeDispositivosMixin():
         """
         Constructor, debe ser invocado para inyectar el contexto
         """
-        self._context = context
-        self._last_update = None
+        self.__context = context
+        self.__last_update = None
 
-    def _lista_obsoleta(self):
+    def __lista_obsoleta(self):
         """
         La lista queda obsoleta pasados EXPIRATION_TIME o si no se ha actualizado
         """
-        if self._last_update is None:
+        if self.__last_update is None:
             return True
-        td = datetime.datetime.now() - self._last_update
+        td = datetime.datetime.now() - self.__last_update
         return td.seconds > CargadorDeDispositivosMixin.EXPIRATION_TIME
 
     def actualizarDispositivos(self):
         """
         Actualiza los dispositivos en el contexto. 
         """
-        if not self._lista_obsoleta():
+        if not self.__lista_obsoleta():
             return
 
         log.info("Actualizando dispositivos desde T-Mobility...")
@@ -73,41 +82,109 @@ class CargadorDeDispositivosMixin():
                 dispositivo["maskBin"] = int(dispositivo["MASK"][::-1], base=2)
                 dispositivo["maskextBin"] = int(dispositivo["MASKEXT"][::-1], base=2)
                 dd[dispositivo["ID_MOVIL"]] = dispositivo
-            self._context.dispositivos = dd
-            self._last_update = datetime.datetime.now()
+            self.__context.dispositivos = dd
+            self.__last_update = datetime.datetime.now()
 
 
-class AMQPSendBackMixin():
+class AMQPSendBackMixin(BaseMixin):
     """
     Mixin para incorporar la funcionalidad de devolución a la cola de origen
-    si ha dado algún error de proceso
+    si ha dado algún error de proceso. Como los mensajes solo se devuelven
+    en caso de error se asume que es una situación excepcional, por eso se
+    abre la conexión en cada rechazo.
     """
 
     """Número máximo de rebotes de mensaje antes de descartarlo definitivamente"""
     MAX_DELIVERY_COUNT = 10
+    MAX_PRIORITY = 99
 
     def __init__(self, context):
+        """
+        Constructor
+        param: context: contexto de ejecución
+        """
         self.__context = context
 
     def sendBack(self, properties, body):
-        pass
+        """
+        Devuelve a la cola de tmobility mensajes que han dado un error. Esto se
+        realiza hasta que superan un MAX_DELIVERY_COUNT en que son
+        permanentemente descartados. Delivery_count es una cabecera del mensaje,
+        si el mensaje llega sin cabeceras este método le crea una básica para
+        poder controlar el delivery_count
+        Se respetan las cabeceras originales salvo
+            1. delivery_count se incrementa en una unidad
+            2. priority se incrementa a MAX_PRIORITY
+        """
+        if properties.headers is None:
+            properties.headers = {}
+        if not environ.DELIVERY_COUNT_HEADER in properties.headers:
+            properties.headers[environ.DELIVERY_COUNT_HEADER] = 0
+        properties.headers[environ.DELIVERY_COUNT_HEADER] += 1
+        if properties.headers[environ.DELIVERY_COUNT_HEADER] > \
+                AMQPSendBackMixin.MAX_DELIVERY_COUNT:
+            log.warn("\tIngorando... reintentos superados para " + str(body, "utf-8"))
+            return
 
-class AMQPPublishMixin():
+        properties.priority = AMQPSendBackMixin.MAX_PRIORITY
+
+        parameters = pika.URLParameters(self.context.amqp_dbmanager)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        channel.basic_publish(environ.INSTANCE_TMOBILITY_EXCHANGE, 
+                routing_key = environ.DEFAULT_ROUTING_KEY,
+                properties = properties,
+                body = body)
+
+        channel.close()
+        connection.close()
+
+
+class AMQPPublishMixin(BaseMixin):
     """
     Mixin para incorporar la funcionalidad de reenvío por colas AMQP una vez
-    decodificado e insertado en base de datos
+    decodificado e insertado en base de datos. Al estar reenviando todos los mensajes
+    sobre la colas de dbmanager se mantiene la conexión abierta con el servidor.
+
+    Al terminar la ejecución del proceso principal debe invocar al metodo
+    dispose() para liberar los recursos que se han reservado
     """
 
     def __init__(self, context):
-        self.__context = context
-
-    def publish(self, properties, message):
-        pass
-
+        parameters = pika.URLParameters(context.amqp_dbmanager)
+        self.__connection = pika.BlockingConnection(parameters)
+        self.__channel = self.__connection.channel()
 
 
+    def publish(self, properties, message, routing_key):
+        """
+        Reenvía el mensaje para ser consumido por el resto de procesos de 
+        dbmanager.
+        param: properties: propiedades del mensaje
+        param: message: mensaje en texto
+        param: routing_key: routing key
+        """
+        self.__channel.basic_publish(environ.INSTANCE_MESSAGES_EXCHANGE, 
+                routing_key = routing_key, 
+                body = pickle.dumps(message),
+                properties = properties,
+                mandatory = True)
 
 
+    def dispose(self):
+        """
+        Cierre ordenado del canal y la conexión con el broker de mensajes
+        """
+        self.__channel.close()
+        self.__connection.close()
+
+    def __del__(self):
+        """
+        Previene que hubiera podido quedar abierta la conexión si no se ha invocado
+        dispose()
+        """
+        if self.__connection.is_open:
+            self.dispose()
 
 
 class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
@@ -127,6 +204,7 @@ class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
     mixin
     """
 
+    """Tiempo de espera entre iteraciones"""
     SLEEP_TIME = 5
 
     def __init__(self, worker):
@@ -174,10 +252,10 @@ class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
         try:
             props = pika.BasicProperties()
             props.headers = {
-                 "node" : platform.node()
+                 environ.NODE_HEADER : platform.node()
             }
             channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
-                    routing_key = "", 
+                    routing_key = environ.DEFAULT_ROUTING_KEY, 
                     body = bytes(json.dumps(self._stats), "utf-8"),
                     properties = props,
                     mandatory = True)
@@ -187,17 +265,22 @@ class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
         self._inicializar_estadisticas()
         
 
-    def _on_message(self, method, properties, body):
+    def _on_message(self, channel, method, properties, body):
         """
         Procesamiento del mensaje
+        param: channel: canal
+        param: method: frame method
+        param: properties: propiedades del mensaje
+        param: body: mensaje como array de bytes
         """
         try:
-            mensaje = analizador.parse(self.context, str(body, "utf-8"))
-            self.publish(properties, mensaje)
+            mensaje, routing_key = analizador.parse(self.context,
+                    properties, body)
+            self.publish(properties, mensaje, routing_key)
         except Exception as e:
             log.warn(e)
             self.sendBack(properties, body)
-
+        channel.basic_ack(method.delivery_tag)
 
     def run(self):
         """
@@ -210,17 +293,23 @@ class DecoderImpl(threading.Thread, CargadorDeDispositivosMixin,
         while not self.worker.must_stop:
             self.actualizarDispositivos()
             method, properties, body = channel.basic_get(
-                    environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = True)
+                    environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = False)
             while method is not None:
-                self._on_message(method, properties, body)
+                self._on_message(channel, method, properties, body)
                 if self.worker.must_stop:
                     break
                 method, properties, body = channel.basic_get(
-                        environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = True)
+                        environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = False)
             time.sleep(DecoderImpl.SLEEP_TIME)
 
         channel.close()
         connection.close()
+
+        # mixins
+        CargadorDeDispositivosMixin.dispose(self)
+        AMQPPublishMixin.dispose(self)
+        AMQPSendBackMixin.dispose(self)
+
 
 
 if __name__ == "__main__":

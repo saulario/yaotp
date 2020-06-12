@@ -75,10 +75,10 @@ class ReaderImpl(threading.Thread):
         try:
             props = pika.BasicProperties()
             props.headers = {
-                 "node" : platform.node()
+                 environ.NODE_HEADER : platform.node()
             }
             channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
-                    routing_key = "", 
+                    routing_key = environ.DEFAULT_ROUTING_KEY, 
                     body = bytes(json.dumps(self._stats), "utf-8"),
                     properties = props,
                     mandatory = True)
@@ -130,7 +130,7 @@ class ReaderImpl(threading.Thread):
         """
         try:
             channel.basic_publish(environ.INSTANCE_TMOBILITY_EXCHANGE, 
-                    routing_key = "", 
+                    routing_key = environ.DEFAULT_ROUTING_KEY, 
                     body = bytes(body, "utf-8"),
                     properties = properties, 
                     mandatory = True)
@@ -155,23 +155,23 @@ class ReaderImpl(threading.Thread):
         props = pika.BasicProperties()
         props.priority = 50
         props.message_id = str(uuid.uuid4())
-        props.timestamp = int(time.time())
+        props.timestamp = int(time.mktime(time.gmtime()))
         props.delivery_mode = 2
         props.headers = {
-            "interchange_id" : iid,
-            "node" : platform.node(),
-            "delivery_count" : 0
+            environ.INTERCHANGE_ID_HEADER : iid,
+            environ.NODE_HEADER : platform.node(),
+            environ.DELIVERY_COUNT_HEADER : 0
         }
         notificaciones, mensajes = self._get_mensajes()
 
         for texto in notificaciones:
-            props.headers["type"] = "notification"
+            props.headers[environ.TYPE_HEADER] = environ.TYPE_HEADER_NOTIFICATION
             self._basic_publish(channel, 
                     body = texto,
                     properties = props)
 
         for texto in mensajes:
-            props.headers["type"] = "message"
+            props.headers[environ.TYPE_HEADER] = environ.TYPE_HEADER_MESSAGE
             self._basic_publish(channel, 
                     body = texto,
                     properties = props)

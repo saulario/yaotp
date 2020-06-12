@@ -73,14 +73,15 @@ def parser_factory(context, texto):
     log.debug("<----- Fin")
     return parser
 
-def parse(context, texto):
-    log.debug("-----> Inicio")
-    log.debug("\t(texto): %s" % texto)
+def parse(context, properties, body):
     
+    if properties.headers["type"] == "notification":
+        return ("notification", "tdi")
+
+    texto = str(body, "utf-8")
     mensaje = parser_factory(context, texto).parse(texto)
         
-    log.debug("<----- Fin")        
-    return mensaje
+    return (mensaje, "tdi")
 
 #if __name__ == "__main__":
 #
