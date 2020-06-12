@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 import uuid
+import zlib
 
 # paquetes locales
 import parser.analizador as analizador
@@ -166,7 +167,7 @@ class AMQPPublishMixin(BaseMixin):
         """
         self.__channel.basic_publish(environ.INSTANCE_MESSAGES_EXCHANGE, 
                 routing_key = routing_key, 
-                body = pickle.dumps(message),
+                body = zlib.compress(pickle.dumps(message)),
                 properties = properties,
                 mandatory = True)
 
