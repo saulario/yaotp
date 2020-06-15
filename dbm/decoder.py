@@ -27,7 +27,8 @@ log = logging.getLogger(__name__)
 class DecoderImpl(threading.Thread, 
         mixin.CargadorDeDispositivosMixin,
         mixin.AMQPPublishMixin, 
-        mixin.AMQPSendBackMixin):
+        mixin.AMQPSendBackMixin,
+        mixin.AMQPSendStatsMixin):
     """
     Lee la cola AMQP tmobility para decodificar los mensajes recibidos. Separa
     en implementaciones separadas por tipos de mensaje e incluso para notificaciones.
@@ -56,6 +57,7 @@ class DecoderImpl(threading.Thread,
         self.context = worker.context
         self._inicializar_estadisticas()
 
+
     def _inicializar_estadisticas(self):
         """
         Inicializa el objeto con los datos de estadísticas
@@ -64,11 +66,11 @@ class DecoderImpl(threading.Thread,
         self._stats["id_proceso"] = "%s.%s" % (self.context.instancia, 
                 self.context.proceso)
         self._stats["timestamp"] = str(datetime.datetime.utcnow())
-        self._stats["peticiones_OK"] = 0
-        self._stats["peticiones_ERROR"] = 0
         self._stats["mensajes_recibidos"] = 0
-        self._stats["mensajes_enviados"] = 0
-        self._ultimo_envio = datetime.datetime.now()
+        self._stats["mensajes_enviados"] = 0        
+        self._stats["estado"] = "running"
+        self._ultimo_envio = datetime.datetime.utcnow()
+
 
     def _enviar_estadisticas(self, forzar = False):
         """
@@ -77,30 +79,13 @@ class DecoderImpl(threading.Thread,
         donde se controla si ha transcurrido tiempo suficiente
         param: forzar: envío forzado aunque no haya pasado el tiempo
         """
-
-        if True or False:
-            return
-
-        t2 = datetime.datetime.now() - self._ultimo_envio
+        t2 = datetime.datetime.utcnow() - self._ultimo_envio
         if not forzar and t2.seconds < environ.MONITOR_STATS_INTERVAL:
             return
         log.info("\tEnviando estadísticas ...")
-        parameters = pika.URLParameters(self.context.amqp_monitor)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        try:
-            props = pika.BasicProperties()
-            props.headers = {
-                 environ.NODE_HEADER : platform.node()
-            }
-            channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
-                    routing_key = environ.DEFAULT_ROUTING_KEY, 
-                    body = bytes(json.dumps(self._stats), "utf-8"),
-                    properties = props,
-                    mandatory = True)
-        except pika.exceptions.UnroutableError:
-            log.error("\t*** Error enviando estadísticas")
-        connection.close()
+        if forzar:
+            self._stats["estado"] = "ended"
+        self.sendStats(self._stats)
         self._inicializar_estadisticas()
         
 
@@ -112,14 +97,18 @@ class DecoderImpl(threading.Thread,
         param: properties: propiedades del mensaje
         param: body: mensaje como array de bytes
         """
+        self._stats["mensajes_recibidos"] += 1        
         try:
             mensaje, routing_key = analizador.parse(self.context,
                     properties, body)
             self.publish(properties, mensaje, routing_key)
+            self._stats["mensajes_enviados"] += 1
         except Exception as e:
             log.warn(e)
             self.sendBack(properties, body)
         channel.basic_ack(method.delivery_tag)
+        self._enviar_estadisticas()
+
 
     def run(self):
         """
@@ -144,11 +133,13 @@ class DecoderImpl(threading.Thread,
         channel.close()
         connection.close()
 
+        self._enviar_estadisticas(forzar = True)
+
         # mixins
         mixin.CargadorDeDispositivosMixin.dispose(self)
         mixin.AMQPPublishMixin.dispose(self)
         mixin.AMQPSendBackMixin.dispose(self)
-
+        mixin.AMQPSendStatsMixin.dispose(self)
 
 
 if __name__ == "__main__":

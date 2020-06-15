@@ -4,6 +4,7 @@ import configparser
 import datetime
 import json
 import logging
+import mixin
 import optparse
 import os
 import os.path
@@ -22,7 +23,8 @@ import handlers
 
 log = logging.getLogger(__name__)
 
-class ReaderImpl(threading.Thread):
+class ReaderImpl(threading.Thread,
+        mixin.AMQPSendStatsMixin):
     """
     Lee las colas de T-Mobility e inserta directamente en colas AMQP. Genera
     estadísticas cada 5 minutos que se envían a través del exchange stats
@@ -40,9 +42,12 @@ class ReaderImpl(threading.Thread):
 
     def __init__(self, worker):
         super().__init__(name = type(self).__name__)
+        mixin.AMQPSendStatsMixin.__init__(self, context)
+
         self.worker = worker
         self.context = worker.context
         self._inicializar_estadisticas()
+
 
     def _inicializar_estadisticas(self):
         """
@@ -56,43 +61,32 @@ class ReaderImpl(threading.Thread):
         self._stats["peticiones_ERROR"] = 0
         self._stats["mensajes_recibidos"] = 0
         self._stats["mensajes_enviados"] = 0
-        self._ultimo_envio = datetime.datetime.now()
+        self._stats["estado"] = "running"
+        self._ultimo_envio = datetime.datetime.utcnow()
+
 
     def _enviar_estadisticas(self, forzar = False):
         """
         Se envían estadísticas pasado un intervalo de n minutos y al terminar
         la ejecución del proceso. Se ejecuta en cada ciclo, pero es aquí 
         donde se controla si ha transcurrido tiempo suficiente
-        param: forzar: envío forzado aunque no haya pasado el tiempo
+        param: forzar: envío forzado en parada de proceso
         """
-        t2 = datetime.datetime.now() - self._ultimo_envio
+        t2 = datetime.datetime.utcnow() - self._ultimo_envio
         if not forzar and t2.seconds < environ.MONITOR_STATS_INTERVAL:
             return
         log.info("\tEnviando estadísticas ...")
-        parameters = pika.URLParameters(self.context.amqp_monitor)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        try:
-            props = pika.BasicProperties()
-            props.headers = {
-                 environ.NODE_HEADER : platform.node()
-            }
-            channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
-                    routing_key = environ.DEFAULT_ROUTING_KEY, 
-                    body = bytes(json.dumps(self._stats), "utf-8"),
-                    properties = props,
-                    mandatory = True)
-        except pika.exceptions.UnroutableError:
-            log.error("\t*** Error enviando estadísticas")
-        connection.close()
+        if forzar:
+            self._stats["estado"] = "ended"
+        self.sendStats(self._stats)
         self._inicializar_estadisticas()
+
 
     def _get_mensajes(self):
         """
         Hace petición a T-Mobility y devuelve un array de mensajes. Actualiza
         las estadísticas de peticiones
         """
-
         t1 = datetime.datetime.now()
         notificaciones = []
         mensajes = []
@@ -120,6 +114,7 @@ class ReaderImpl(threading.Thread):
         log.info("\tRecuperados %d mensajes en %s segundos" % (recibidos, t1))
 
         return (notificaciones, mensajes)
+
 
     def _basic_publish(self, channel, body, properties):
         """
@@ -151,17 +146,10 @@ class ReaderImpl(threading.Thread):
         parameters = pika.URLParameters(self.context.amqp_dbmanager)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        iid = str(uuid.uuid4())
-        props = pika.BasicProperties()
-        props.priority = 50
-        props.message_id = str(uuid.uuid4())
-        props.timestamp = int(time.mktime(time.gmtime()))
-        props.delivery_mode = 2
-        props.headers = {
-            environ.INTERCHANGE_ID_HEADER : iid,
-            environ.NODE_HEADER : platform.node(),
-            environ.DELIVERY_COUNT_HEADER : 0
-        }
+
+        props = self.getBasicProperties()
+        props.headers[environ.INTERCHANGE_ID_HEADER] = str(uuid.uuid4())
+
         notificaciones, mensajes = self._get_mensajes()
 
         for texto in notificaciones:
@@ -179,6 +167,7 @@ class ReaderImpl(threading.Thread):
         connection.close()
         self._enviar_estadisticas()
 
+
     def run(self):
         """
         Ejecución del worker
@@ -187,6 +176,10 @@ class ReaderImpl(threading.Thread):
             self._runImpl()
             time.sleep(ReaderImpl.SLEEP_TIME)
         self._enviar_estadisticas(forzar = True)
+
+        # mixins
+        mixin.AMQPSendStatsMixin.dispose(self)
+
 
 if __name__ == "__main__":
 

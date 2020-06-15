@@ -10,10 +10,6 @@ import environment as environ
 log = logging.getLogger(__name__)
 
 
-
-
-
-
 class CommandQueueHandler(threading.Thread):
     """
     Handler encargado de escuchar la cola de comandos para todos los procesos.
@@ -29,6 +25,7 @@ class CommandQueueHandler(threading.Thread):
         self.worker = worker 
         self.context = worker.context
 
+
     def on_message(self, channel, method_frame, header_frame, body):
         """
         Procesa los comandos recibidos por la cola commands. De momento solo
@@ -38,6 +35,7 @@ class CommandQueueHandler(threading.Thread):
         if b"STOP" in body:
             log.info("\tRecibido comando STOP...")
             channel.stop_consuming()        
+
 
     def run(self):
         """
@@ -72,6 +70,7 @@ class BasicWorker():
     def __init__(self, context):
         self.context = context
         self.must_stop = False
+
 
     def run(self, process, handler = CommandQueueHandler):
         """

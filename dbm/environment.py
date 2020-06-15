@@ -13,16 +13,20 @@ DBMANAGER_VERSION = "1.0"
 DBMANAGER_HOME = ("%s/tdi/dbmanager-%s" % (os.path.expanduser("~"), DBMANAGER_VERSION))
 
 #
-DEFAULT_ROUTING_KEY = ""
+DEFAULT_ROUTING_KEY = "none"
+DEFAULT_DELIVERY_MODE = 2
+DEFAULT_PRIORITY = 50
 
 # headers
 DELIVERY_COUNT_HEADER = "delivery_count"
 INTERCHANGE_ID_HEADER = "interchange_id"
 NODE_HEADER = "node"
+PROCESS_HEADER = "process"
 
 TYPE_HEADER = "type"
 TYPE_HEADER_MESSAGE = "message"
 TYPE_HEADER_NOTIFICATION = "notification"
+TYPE_HEADER_STATS = "stats"
 
 # virtual host monitor
 MONITOR_COMMANDS_EXCHANGE = "commands"      
@@ -109,6 +113,7 @@ def obtener_nombre_archivo_log(context):
     """
     return ("%s/%s/log/%s.log" % (DBMANAGER_HOME,
             context.instancia, context.proceso))
+
 
 def obtener_contexto_desde_configuracion(cp):
     """

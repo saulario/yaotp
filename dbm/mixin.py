@@ -2,9 +2,13 @@
 
 import logging
 import datetime
+import json
 import pika
 import pickle
+import platform
 import requests
+import time
+import uuid
 import zlib
 
 # paquetes locales
@@ -20,7 +24,34 @@ class BaseMixin():
         pass
 
 
-class AMQPPublishMixin(BaseMixin):
+class AMQPBaseMixin(BaseMixin):
+    """
+    Mixin para incorporar la funcionalidad de crear BasicProperties estándar para todos
+    los mixin que envían mensajes por las colas AMQP
+    """
+    def __init__(self, context):
+            self.__context = context
+
+    def getBasicProperties(self):
+        """
+        Genera un objeto BasicProperties con todas las cabeceras estándar para todas
+        las comunicaciones por el broker
+        """
+        properties = pika.BasicProperties()
+        properties.priority = environ.DEFAULT_PRIORITY
+        properties.message_id = str(uuid.uuid4())
+        properties.timestamp = int(time.mktime(time.gmtime()))
+        properties.delivery_mode = environ.DEFAULT_DELIVERY_MODE
+        h = {}
+        h[environ.NODE_HEADER] = platform.node()
+        h[environ.PROCESS_HEADER] = "%s.%s" % (
+                self.__context.instancia, self.__context.proceso)
+        h[environ.DELIVERY_COUNT_HEADER] = 0
+        properties.headers = h
+        return properties
+
+
+class AMQPPublishMixin(AMQPBaseMixin):
     """
     Mixin para incorporar la funcionalidad de reenvío por colas AMQP una vez
     decodificado e insertado en base de datos. Al estar reenviando todos los mensajes
@@ -31,6 +62,7 @@ class AMQPPublishMixin(BaseMixin):
     """
 
     def __init__(self, context):
+        super().__init__(context)
         parameters = pika.URLParameters(context.amqp_dbmanager)
         self.__connection = pika.BlockingConnection(parameters)
         self.__channel = self.__connection.channel()
@@ -58,6 +90,7 @@ class AMQPPublishMixin(BaseMixin):
         self.__channel.close()
         self.__connection.close()
 
+
     def __del__(self):
         """
         Previene que hubiera podido quedar abierta la conexión si no se ha invocado
@@ -67,7 +100,7 @@ class AMQPPublishMixin(BaseMixin):
             self.dispose()
 
 
-class AMQPSendBackMixin(BaseMixin):
+class AMQPSendBackMixin(AMQPBaseMixin):
     """
     Mixin para incorporar la funcionalidad de devolución a la cola de origen
     si ha dado algún error de proceso. Como los mensajes solo se devuelven
@@ -77,6 +110,7 @@ class AMQPSendBackMixin(BaseMixin):
 
     """Número máximo de rebotes de mensaje antes de descartarlo definitivamente"""
     MAX_DELIVERY_COUNT = 10
+    """Nueva prioridad para los mensajes rechazados"""
     MAX_PRIORITY = 99
 
     def __init__(self, context):
@@ -84,7 +118,9 @@ class AMQPSendBackMixin(BaseMixin):
         Constructor
         param: context: contexto de ejecución
         """
+        super().__init__(context)
         self.__context = context
+
 
     def sendBack(self, properties, body):
         """
@@ -101,6 +137,7 @@ class AMQPSendBackMixin(BaseMixin):
             properties.headers = {}
         if not environ.DELIVERY_COUNT_HEADER in properties.headers:
             properties.headers[environ.DELIVERY_COUNT_HEADER] = 0
+
         properties.headers[environ.DELIVERY_COUNT_HEADER] += 1
         if properties.headers[environ.DELIVERY_COUNT_HEADER] > \
                 AMQPSendBackMixin.MAX_DELIVERY_COUNT:
@@ -121,6 +158,46 @@ class AMQPSendBackMixin(BaseMixin):
         connection.close()
 
 
+class AMQPSendStatsMixin(AMQPBaseMixin):
+    """
+    Mixin para incorporar la funcionalidad de envío de estadísticas por el canal de
+    control. Como se envían en un tiempo programado se cierra la conexión para
+    reducir el consumo de recursos.
+    """
+
+    def __init__(self, context):
+        """
+        Constructor
+        param: context: contexto de ejecución
+        """
+        super().__init__(context)
+        self.__context = context
+
+
+    def sendStats(self, data):
+        """
+        Se envían estadísticas pasado un intervalo de n minutos y al terminar
+        la ejecución del proceso. Se ejecuta en cada ciclo, pero es aquí 
+        donde se controla si ha transcurrido tiempo suficiente
+        param: data: datos estadísticos a enviar
+        """
+        log.info("\tEnviando estadísticas ...")
+        parameters = pika.URLParameters(self.context.amqp_monitor)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        try:
+            props = self.getBasicProperties()
+            props.headers[environ.TYPE_HEADER] = environ.TYPE_HEADER_STATS
+            channel.basic_publish(environ.MONITOR_STATS_EXCHANGE, 
+                    routing_key = environ.DEFAULT_ROUTING_KEY, 
+                    body = bytes(json.dumps(self._stats), "utf-8"),
+                    properties = props,
+                    mandatory = True)
+        except pika.exceptions.UnroutableError:
+            log.error("\t*** Error enviando estadísticas")
+        connection.close()
+
+
 class CargadorDeDispositivosMixin(BaseMixin):
     """
     Mixin para incorporar la funcionalidad de recarga de
@@ -137,6 +214,7 @@ class CargadorDeDispositivosMixin(BaseMixin):
         self.__context = context
         self.__last_update = None
 
+
     def __lista_obsoleta(self):
         """
         La lista queda obsoleta pasados EXPIRATION_TIME o si no se ha actualizado
@@ -145,6 +223,7 @@ class CargadorDeDispositivosMixin(BaseMixin):
             return True
         td = datetime.datetime.now() - self.__last_update
         return td.seconds > CargadorDeDispositivosMixin.EXPIRATION_TIME
+
 
     def actualizarDispositivos(self):
         """
