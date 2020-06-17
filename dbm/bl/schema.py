@@ -102,6 +102,7 @@ class MovilDAL(BaseDAL):
         stmt = t.update().values(kwargs).where(t.c.IdMovil == pk)
         conn.execute(stmt)        
 
+
 class PosicionesDAL(BaseDAL):
 
     def __init__(self, metadata):

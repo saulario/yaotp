@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 import configparser
 import datetime
@@ -15,6 +16,7 @@ import time
 import uuid
 
 # paquetes locales
+import bl.schema as schema
 import dbmparser.factory
 import context
 import environment as environ
@@ -87,6 +89,22 @@ class DecoderImpl(threading.Thread,
             self._stats["estado"] = "ended"
         self.sendStats(self._stats)
         self._inicializar_estadisticas()
+
+    
+    def persist(self, properties = None, mensaje = None):
+        """
+        Persiste el mensaje en base de datos. Esto de momento está como
+        lógica local pero será más limpio si sale a un mixin persistor. Para
+        hacer pruebas persiste solo mensajes de posiciones
+        """
+        if mensaje is None:
+            return
+
+        if mensaje["tipoMensaje"] != "TDI*P":
+            return
+
+        posiciones = schema.PosicionesDAL(self.context.sql_metadata)._t
+        pass
         
 
     def _on_message(self, channel, method, properties, body):
@@ -101,6 +119,7 @@ class DecoderImpl(threading.Thread,
         try:
             mensaje, routing_key = dbmparser.factory.parse(self.context,
                     properties, body)
+            self.persist(properties, mensaje)
             self.publish(properties, mensaje, routing_key)
             self._stats["mensajes_enviados"] += 1
         except Exception as e:
@@ -112,11 +131,15 @@ class DecoderImpl(threading.Thread,
 
     def run(self):
         """
-        Punto de entrada del thread
+        Punto de entrada del thread. Abre en cada ejecución la conexión con
+        la base de datos SQL para no saturar de conexiones abiertas. Esta 
+        conexión no está compartida con los mixins, es para uso local.
         """
         parameters = pika.URLParameters(self.context.amqp_dbmanager)
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
+
+        self.__sqlcon = self.context.sql_engine.connect()
 
         while not self.worker.must_stop:
             self.actualizarDispositivos()
@@ -129,6 +152,8 @@ class DecoderImpl(threading.Thread,
                 method, properties, body = channel.basic_get(
                         environ.INSTANCE_TMOBILITY_EXCHANGE, auto_ack = False)
             time.sleep(DecoderImpl.SLEEP_TIME)
+
+        self.__sqlcon.close()
 
         channel.close()
         connection.close()
