@@ -15,7 +15,7 @@ import time
 import uuid
 
 # paquetes locales
-import parser.analizador as analizador
+import dbmparser.factory
 import context
 import environment as environ
 import handlers
@@ -99,7 +99,7 @@ class DecoderImpl(threading.Thread,
         """
         self._stats["mensajes_recibidos"] += 1        
         try:
-            mensaje, routing_key = analizador.parse(self.context,
+            mensaje, routing_key = dbmparser.factory.parse(self.context,
                     properties, body)
             self.publish(properties, mensaje, routing_key)
             self._stats["mensajes_enviados"] += 1
