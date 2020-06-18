@@ -126,7 +126,7 @@ class DecoderImpl(threading.Thread,
             self.publish(properties, mensaje, routing_key)
             self._stats["mensajes_enviados"] += 1
         except Exception as e:
-            log.warn(e)
+            log.warning(e)
             self.sendBack(properties, body)
         channel.basic_ack(method.delivery_tag)
         self._enviar_estadisticas()
@@ -205,7 +205,7 @@ if __name__ == "__main__":
             handlers.BasicWorker(context).run(DecoderImpl)
             environ.borrar_instancia_activa(context)
         else:
-            log.warn("*** Saliendo, existe una instancia en ejecución")
+            log.warning("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:
         log.error(e)
         retval = 1

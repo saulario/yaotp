@@ -37,12 +37,12 @@ def parser_factory(context, texto):
     campos = texto.split(",")
     
     if len(campos) < 3:
-        log.warn("<----- Mensaje aparentemente incorrecto, saliendo... %s" % (texto))
+        log.warning("<----- Mensaje aparentemente incorrecto, saliendo... %s" % (texto))
         return parser
     
     id_dev = int(campos[1])
     if not id_dev in context.dispositivos:
-        log.warn("<----- Dispositivo %d no encontrado, saliendo..." % id_dev)
+        log.warning("<----- Dispositivo %d no encontrado, saliendo..." % id_dev)
         return parser
         
     dispositivo = context.dispositivos[id_dev]

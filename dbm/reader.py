@@ -216,7 +216,7 @@ if __name__ == "__main__":
             handlers.BasicWorker(context).run(ReaderImpl)
             environ.borrar_instancia_activa(context)
         else:
-            log.warn("*** Saliendo, existe una instancia en ejecución")
+            log.warning("*** Saliendo, existe una instancia en ejecución")
     except Exception as e:
         log.error(e)
         retval = 1

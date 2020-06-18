@@ -141,7 +141,7 @@ class AMQPSendBackMixin(AMQPBaseMixin):
         properties.headers[environ.DELIVERY_COUNT_HEADER] += 1
         if properties.headers[environ.DELIVERY_COUNT_HEADER] > \
                 AMQPSendBackMixin.MAX_DELIVERY_COUNT:
-            log.warn("\tIngorando... reintentos superados para " + str(body, "utf-8"))
+            log.warning("\tIngorando... reintentos superados para " + str(body, "utf-8"))
             return
 
         properties.priority = AMQPSendBackMixin.MAX_PRIORITY
