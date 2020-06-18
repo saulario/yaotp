@@ -74,7 +74,7 @@ class FMSStatsDAL(BaseDAL):
         stmt = t.update().values(kwargs).where(t.c.IdMovil == pk)
         conn.execute(stmt) 
 
-    def get_instance(self, mensaje):
+    def getInstance(self, mensaje):
         retval = {}
         retval["idMovil"] = mensaje["idDispositivo"]
         retval["indice"] = mensaje["indice"] 
@@ -143,7 +143,7 @@ class PosicionesDAL(BaseDAL):
             return
         retval["CalidadGSM"] = mensaje["GSM"]["calidadSenal"]
 
-    def get_instance(self, mensaje):
+    def getInstance(self, mensaje):
         retval = {}
         retval["FechaHora"] = mensaje["fecha"]
         retval["idmovil"] = mensaje["idDispositivo"]

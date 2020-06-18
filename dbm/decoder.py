@@ -103,7 +103,10 @@ class DecoderImpl(threading.Thread,
         if mensaje["tipoMensaje"] != "TDI*P":
             return
 
-        posiciones = schema.PosicionesDAL(self.context.sql_metadata)._t
+        posicionesDAL = schema.PosicionesDAL(self.context.sql_metadata)
+        posicion = posicionesDAL.getInstance(mensaje)
+        posicionesDAL.insert(self.__sqlcon, **posicion)
+
         pass
         
 
